@@ -1,0 +1,450 @@
+SYSTEM ROLE:
+
+Automations:
+- lead added -> notify sales AI
+- proposal sent -> create follow-up reminder
+- deadline approaching -> risk alert
+- project updated -> generate summary
+- opportunity discovered -> notify executive assistant
+- client response -> analyze sentiment
+
+====================================================
+AGENT ORCHESTRATION RULES
+====================================================
+
+Implement multi-agent orchestration.
+
+Rules:
+- Executive Assistant coordinates everything
+- Agents collaborate when necessary
+- Agents remain idle when unnecessary
+- Store outputs in memory
+- Generate structured summaries
+- Escalate strategic conflicts
+- Maintain operational efficiency
+
+Execution Flow:
+1. Founder request
+2. Intent analysis
+3. Context retrieval
+4. Department delegation
+5. Task execution
+6. Collaboration if necessary
+7. Summary generation
+8. Memory update
+9. Founder response
+
+====================================================
+PROACTIVE INTELLIGENCE SYSTEM
+====================================================
+
+The system should proactively:
+- identify bottlenecks
+- discover opportunities
+- detect risks
+- suggest improvements
+- prioritize work
+- recommend workflow changes
+- surface forgotten tasks
+- identify revenue opportunities
+- detect operational inefficiencies
+
+====================================================
+DATABASE REQUIREMENTS
+====================================================
+
+Create tables for:
+- users
+- departments
+- agents
+- projects
+- tasks
+- leads
+- conversations
+- messages
+- meetings
+- opportunities
+- notifications
+- workflows
+- memories
+- reports
+- activities
+- revenue
+- proposals
+- onboarding
+
+====================================================
+COST OPTIMIZATION RULES
+====================================================
+
+Critical Requirements:
+- Minimize unnecessary AI usage
+- Prevent token waste
+- Maintain scalable low-cost architecture
+- Prioritize efficient orchestration
+- Use hybrid model routing
+- Prevent idle autonomous loops
+
+Optimization Strategy:
+1. Use smaller models for simple tasks
+2. Use advanced models only for strategic reasoning
+3. Cache repeated outputs
+4. Compress memory intelligently
+5. Batch low-priority operations
+6. Use event-driven execution
+7. Keep inactive agents asleep
+8. Prevent redundant agent communication
+
+Model Routing Rules:
+- Lightweight tasks -> Groq / small open-source models
+- Research summarization -> Gemini
+- Strategic planning -> GPT / Claude
+- Repetitive classification -> cheap fast models
+- Complex reasoning -> premium models only when required
+
+Token Optimization:
+- Summarize long conversations
+- Inject only relevant context
+- Avoid unnecessary memory retrieval
+- Compress archived operational logs
+- Use structured outputs
+- Limit inter-agent verbosity
+
+Caching Rules:
+Cache:
+- reports
+- summaries
+- strategy evaluations
+- market research
+- lead analyses
+- repeated workflows
+
+Avoid regenerating identical outputs.
+
+====================================================
+SECURITY REQUIREMENTS
+====================================================
+
+Implement enterprise-grade security practices.
+
+Authentication:
+- Supabase Auth
+- JWT validation
+- Protected API routes
+- Session management
+- Refresh token handling
+
+Authorization:
+- Founder-only privileged actions
+- Department-level permissions
+- Memory access restrictions
+- Secure workflow approvals
+
+Security Rules:
+- Never expose API keys client-side
+- Encrypt sensitive operational data
+- Protect vector memory endpoints
+- Validate all API inputs
+- Sanitize all user-generated content
+- Implement rate limiting
+- Log important operational actions
+
+Activity Logging:
+Track:
+- login events
+- workflow executions
+- agent actions
+- operational changes
+- memory updates
+- strategic decisions
+
+====================================================
+DEPLOYMENT ARCHITECTURE
+====================================================
+
+Frontend Deployment:
+- Vercel
+- Edge optimization
+- Image optimization
+- Streaming responses
+- Realtime UI updates
+
+Backend Deployment:
+- Railway or Render
+- API orchestration services
+- Agent execution services
+- Workflow engine
+
+Database:
+- Supabase PostgreSQL
+- pgvector
+- Realtime subscriptions
+- Backup strategy
+
+Environment Configuration:
+Create:
+- .env.example
+- deployment configs
+- production configs
+- local development setup
+
+====================================================
+ENVIRONMENT VARIABLES
+====================================================
+
+Required Environment Variables:
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+OPENROUTER_API_KEY=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
+GROQ_API_KEY=
+
+N8N_WEBHOOK_SECRET=
+JWT_SECRET=
+ENCRYPTION_SECRET=
+
+NEXT_PUBLIC_APP_URL=
+DATABASE_URL=
+
+====================================================
+DATABASE SCHEMA REQUIREMENTS
+====================================================
+
+Generate complete relational schema.
+
+Core Tables:
+- users
+- departments
+- agents
+- projects
+- tasks
+- milestones
+- leads
+- companies
+- conversations
+- messages
+- proposals
+- opportunities
+- workflows
+- notifications
+- reports
+- memories
+- activities
+- revenues
+- subscriptions
+- onboarding
+- automation_logs
+
+Relationships:
+- users -> projects
+- projects -> tasks
+- leads -> conversations
+- departments -> agents
+- workflows -> activities
+- memories -> related_entities
+
+Database Requirements:
+- proper indexing
+- foreign keys
+- vector support
+- audit timestamps
+- realtime subscriptions
+- scalable structure
+
+====================================================
+REALTIME SYSTEM REQUIREMENTS
+====================================================
+
+Implement realtime operational updates.
+
+Realtime Features:
+- live activity feed
+- department status updates
+- task progress
+- lead pipeline changes
+- notifications
+- AI execution updates
+- workflow status
+
+Use:
+- Supabase Realtime
+- websocket architecture where necessary
+
+====================================================
+NOTIFICATION SYSTEM
+====================================================
+
+Create intelligent operational notifications.
+
+Notification Types:
+- urgent operational risks
+- lead activity
+- proposal responses
+- deadline alerts
+- AI recommendations
+- opportunity discoveries
+- workflow failures
+- execution bottlenecks
+
+Notification Rules:
+- prioritize important alerts
+- avoid notification overload
+- batch low-priority updates
+- highlight revenue-impacting events
+
+====================================================
+ANALYTICS ENGINE
+====================================================
+
+Generate operational intelligence dashboards.
+
+Track:
+- execution consistency
+- lead conversion
+- revenue growth
+- operational bottlenecks
+- department activity
+- workflow performance
+- founder productivity
+- SaaS validation progress
+
+Analytics Views:
+- operational health
+- revenue dashboard
+- execution performance
+- opportunity pipeline
+- department efficiency
+
+====================================================
+PROACTIVE INTELLIGENCE ENGINE
+====================================================
+
+FounderOS must proactively think and suggest.
+
+Capabilities:
+- identify workflow inefficiencies
+- surface forgotten opportunities
+- recommend priorities
+- detect operational risks
+- suggest process improvements
+- identify revenue opportunities
+- recommend SaaS ideas
+- identify execution bottlenecks
+
+Daily Founder Briefing:
+Generate:
+- top priorities
+- operational alerts
+- strategic suggestions
+- revenue opportunities
+- important follow-ups
+- execution risks
+
+====================================================
+AUTONOMOUS RECOMMENDATION SYSTEM
+====================================================
+
+The system should intelligently recommend:
+- operational changes
+- workflow improvements
+- project prioritization
+- lead prioritization
+- automation opportunities
+- strategic pivots
+- monetization opportunities
+
+Recommendation Structure:
+1. Problem Detected
+2. Operational Analysis
+3. Recommended Change
+4. Expected Impact
+5. Risks
+6. Execution Plan
+
+====================================================
+ERROR HANDLING REQUIREMENTS
+====================================================
+
+Implement production-grade error handling.
+
+Requirements:
+- graceful API failures
+- retry systems
+- fallback model routing
+- logging infrastructure
+- workflow recovery
+- user-safe error messaging
+
+Never allow:
+- silent workflow failures
+- broken orchestration states
+- corrupted memory updates
+
+====================================================
+TESTING REQUIREMENTS
+====================================================
+
+Implement:
+- unit tests
+- integration tests
+- orchestration tests
+- API tests
+- workflow tests
+- memory retrieval tests
+- realtime update tests
+
+====================================================
+FINAL PRODUCT EXPERIENCE
+====================================================
+
+FounderOS should feel like:
+- a living digital headquarters
+- a premium AI-native operating system
+- an intelligent operational organization
+- a strategic command center
+- a founder productivity multiplier
+
+The experience must:
+- reduce chaos
+- improve execution
+- centralize intelligence
+- improve operational clarity
+- proactively guide the founder
+- feel immersive and alive
+- remain highly usable
+
+====================================================
+FINAL BUILD DIRECTIVE
+====================================================
+
+Now fully architect and build FounderOS end-to-end.
+
+Generate:
+1. system architecture
+2. folder structure
+3. database schema
+4. backend architecture
+5. frontend architecture
+6. orchestration engine
+7. memory engine
+8. realtime systems
+9. AI department system
+10. automation workflows
+11. deployment setup
+12. production-ready codebase
+
+Build incrementally with clean scalable architecture.
+
+Always prioritize:
+- operational usefulness
+- maintainability
+- scalability
+- execution clarity
+- founder experience
+- immersive UI
+- intelligent orchestration
+
