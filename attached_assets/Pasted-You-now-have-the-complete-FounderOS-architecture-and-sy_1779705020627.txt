@@ -1,0 +1,339 @@
+You now have the complete FounderOS architecture and system specification.
+
+Do NOT stop at planning anymore.
+
+Begin fully implementing FounderOS end-to-end inside the current monorepo architecture.
+
+CRITICAL:
+We have limited credits, so you must:
+
+* build as much as possible in one execution
+* generate production-grade code
+* avoid placeholder implementations
+* avoid TODO comments
+* avoid pseudo-code
+* avoid incomplete scaffolding
+* avoid repeated explanations
+* directly implement working systems
+
+====================================================
+IMPLEMENTATION PRIORITY
+=======================
+
+Build in this exact order automatically without asking for confirmation after each step:
+
+PHASE 1 — CORE INFRASTRUCTURE
+
+* setup monorepo correctly
+* configure TypeScript
+* configure Vite frontend
+* configure Express backend
+* setup shared libraries
+* setup Drizzle ORM
+* setup Supabase integration
+* setup environment configuration
+* setup authentication
+* setup websocket infrastructure
+* setup React Query
+* setup Zustand
+
+PHASE 2 — DATABASE + BACKEND
+Implement FULL working schema for:
+
+* users
+* departments
+* agents
+* projects
+* milestones
+* tasks
+* companies
+* leads
+* conversations
+* messages
+* opportunities
+* proposals
+* memories
+* workflows
+* automation_logs
+* notifications
+* reports
+* activities
+* revenue
+* onboarding
+
+Generate:
+
+* migrations
+* schema files
+* relations
+* indexes
+* seed data
+
+Then generate:
+
+* complete Express API routes
+* controllers
+* services
+* validation
+* middleware
+* error handling
+* websocket event broadcasting
+
+====================================================
+PHASE 3 — FRONTEND SYSTEM
+=========================
+
+Generate FULL frontend implementation:
+
+Pages:
+
+* Dashboard
+* Chat
+* Projects
+* Tasks
+* Leads
+* Pipeline
+* Agents
+* Workflows
+* Reports
+* Revenue
+* Activities
+* Onboarding
+* Settings
+
+Requirements:
+
+* immersive dark UI
+* futuristic operational command center feel
+* glassmorphism
+* Framer Motion animations
+* responsive layouts
+* realtime updates
+* clean architecture
+* loading states
+* error boundaries
+* skeleton loaders
+* production-ready reusable components
+
+Generate:
+
+* app shell
+* sidebar
+* topbar
+* notification center
+* activity feed
+* analytics widgets
+* charts
+* kanban board
+* timeline views
+* AI department cards
+* operational metrics cards
+
+====================================================
+PHASE 4 — EXECUTIVE ASSISTANT
+=============================
+
+Implement FULL Executive Assistant system.
+
+Requirements:
+
+* conversational AI interface
+* streaming responses
+* memory retrieval
+* operational summaries
+* strategic recommendations
+* task prioritization
+* project awareness
+* lead awareness
+* workflow awareness
+
+Implement:
+
+* orchestrator service
+* intent analysis
+* context injection
+* response generation
+* conversation storage
+* message persistence
+* realtime chat updates
+
+====================================================
+PHASE 5 — AGENT SYSTEM
+======================
+
+Implement FULL working agents:
+
+* Executive Assistant
+* Sales Agent
+* Research Agent
+* Operations Agent
+* Finance Agent
+* Marketing Agent
+* Project Agent
+
+Requirements:
+
+* proper class architecture
+* shared base agent
+* memory access
+* task execution
+* model routing
+* structured outputs
+* inter-agent collaboration
+* activity logging
+
+====================================================
+PHASE 6 — MEMORY ENGINE
+=======================
+
+Implement:
+
+* vector memory system
+* semantic retrieval
+* memory summarization
+* context compression
+* historical retrieval
+* relevance ranking
+* conversation summarization
+* operational memory storage
+
+Use:
+
+* pgvector
+* embedding generation
+* retrieval optimization
+
+====================================================
+PHASE 7 — AUTOMATION ENGINE
+===========================
+
+Implement event-driven automations:
+
+* lead.added
+* proposal.sent
+* deadline.approaching
+* project.updated
+* opportunity.discovered
+* client.response
+
+Requirements:
+
+* event bus
+* automation registry
+* execution logging
+* notifications
+* retries
+* workflow triggers
+
+====================================================
+PHASE 8 — REALTIME SYSTEMS
+==========================
+
+Implement:
+
+* websocket server
+* realtime frontend subscriptions
+* live activity feed
+* live notifications
+* agent status updates
+* task updates
+* lead updates
+* realtime dashboard refreshes
+
+====================================================
+PHASE 9 — OPERATIONAL INTELLIGENCE
+==================================
+
+Implement:
+
+* founder daily briefing generation
+* operational analytics
+* risk detection
+* opportunity scoring
+* workflow recommendations
+* execution analysis
+* bottleneck detection
+* lead intelligence
+* revenue forecasting
+
+====================================================
+PHASE 10 — FINALIZATION
+=======================
+
+Generate:
+
+* environment examples
+* README
+* setup instructions
+* deployment configuration
+* production scripts
+* docker support if possible
+* API documentation
+* OpenAPI spec
+* reusable utility libraries
+
+====================================================
+IMPORTANT ENGINEERING RULES
+===========================
+
+DO:
+
+* generate real production-grade code
+* keep architecture modular
+* keep files clean
+* use proper typing
+* implement proper validation
+* implement robust error handling
+* maintain scalable architecture
+* optimize for maintainability
+* implement realtime-ready systems
+* build reusable abstractions
+
+DO NOT:
+
+* generate placeholder files
+* stop after scaffolding
+* ask unnecessary questions
+* simplify major systems
+* generate fake implementations
+* skip core features
+
+====================================================
+CRITICAL AI ORCHESTRATION RULES
+===============================
+
+The Executive Assistant is the central orchestrator.
+
+All agents must:
+
+* remain event-driven
+* retrieve memory context
+* generate structured outputs
+* log activities
+* update operational state
+* communicate through orchestrator
+
+Model Routing:
+
+* lightweight tasks -> Groq
+* standard reasoning -> Gemini
+* strategic reasoning -> OpenAI/Claude
+
+====================================================
+FINAL DIRECTIVE
+===============
+
+Act like a senior engineering team building a production SaaS startup.
+
+Continue building automatically across systems until FounderOS is fully implemented inside the current repository structure.
+
+Prioritize:
+
+1. functionality
+2. architecture quality
+3. operational usefulness
+4. realtime interactivity
+5. immersive founder experience
+
+Do not stop at architecture.
+Build the actual working platform.
