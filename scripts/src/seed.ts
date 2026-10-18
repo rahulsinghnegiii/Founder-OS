@@ -1,3 +1,5 @@
+import "./loadEnv";
+import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   departmentsTable,
@@ -5,118 +7,134 @@ import {
   projectsTable,
   tasksTable,
   leadsTable,
+  proposalsTable,
+  followUpsTable,
   workflowsTable,
   notificationsTable,
   revenueTable,
   opportunitiesTable,
 } from "@workspace/db";
 
+const DEMO = process.argv.includes("--demo") || process.env.SEED_DEMO === "1";
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS);
+
 async function seed() {
-  console.log("Seeding FounderOS demo data...");
+  console.log("Resetting FounderOS data...");
 
-  // Departments
-  const [salesDept, engDept, mktDept, opsDept] = await db
-    .insert(departmentsTable)
-    .values([
-      { name: "Sales", slug: "sales", description: "Revenue generation and lead conversion" },
-      { name: "Engineering", slug: "engineering", description: "Product development and technical execution" },
-      { name: "Marketing", slug: "marketing", description: "Brand awareness and demand generation" },
-      { name: "Operations", slug: "operations", description: "Systems, processes, and infrastructure" },
-    ])
-    .returning()
-    .onConflictDoNothing();
+  // Operational tables are cleared on every seed so the UI only ever shows
+  // real records (or an intentional empty state). Departments + agents are
+  // the system's own structure and are upserted in place.
+  await db.delete(followUpsTable);
+  await db.delete(proposalsTable);
+  await db.delete(opportunitiesTable);
+  await db.delete(revenueTable);
+  await db.delete(notificationsTable);
+  await db.delete(workflowsTable);
+  await db.delete(tasksTable);
+  await db.delete(projectsTable);
+  await db.delete(leadsTable);
 
-  if (!salesDept) { console.log("Data already seeded, skipping."); return; }
+  // Departments — MVP scope: Executive Assistant + Sales are live, the rest
+  // are visible as "coming soon" (isActive=false) and never receive work.
+  const departments = [
+    { name: "Executive Assistant", slug: "executive-assistant", description: "Orchestrates every request, keeps context, and routes work to the right department.", isActive: true },
+    { name: "Sales", slug: "sales", description: "Watches the pipeline, flags deals going quiet, drafts follow-ups, and scores new leads.", isActive: true },
+    { name: "Marketing", slug: "marketing", description: "Positioning, content, and growth experiments.", isActive: false },
+    { name: "Operations", slug: "operations", description: "Projects, tasks, deadlines, and execution health.", isActive: false },
+    { name: "Strategy", slug: "strategy", description: "Bottlenecks, opportunities, and recommendations.", isActive: false },
+  ];
 
-  // Agents
-  await db.insert(agentsTable).values([
-    { name: "Alex — Sales Intelligence", slug: "alex-sales", departmentId: salesDept.id, description: "Identifies and qualifies leads, scores prospects, drafts outreach", status: "active", modelTier: "standard", capabilities: ["lead_scoring", "email_outreach", "crm_updates", "proposal_drafting"] },
-    { name: "Max — Growth Engine", slug: "max-growth", departmentId: mktDept.id, description: "Runs market analysis, content strategy, and campaign optimization", status: "idle", modelTier: "premium", capabilities: ["market_research", "content_generation", "seo_analysis", "competitor_tracking"] },
-    { name: "Jordan — Build Ops", slug: "jordan-eng", departmentId: engDept.id, description: "Tracks technical tasks, manages sprints, identifies blockers", status: "busy", modelTier: "standard", capabilities: ["task_management", "code_review", "sprint_planning", "bug_triage"] },
-    { name: "Riley — Ops Commander", slug: "riley-ops", departmentId: opsDept.id, description: "Orchestrates workflows, monitors systems, manages automations", status: "active", modelTier: "lightweight", capabilities: ["workflow_automation", "system_monitoring", "process_optimization", "reporting"] },
-    { name: "Sam — Finance Analyst", slug: "sam-finance", departmentId: opsDept.id, description: "Tracks revenue, forecasts cash flow, analyzes deal economics", status: "idle", modelTier: "standard", capabilities: ["revenue_tracking", "forecasting", "deal_analysis", "budget_monitoring"] },
-  ]).onConflictDoNothing();
+  for (const dept of departments) {
+    await db
+      .insert(departmentsTable)
+      .values(dept)
+      .onConflictDoUpdate({
+        target: departmentsTable.slug,
+        set: { name: dept.name, description: dept.description, isActive: dept.isActive, updatedAt: sql`now()` },
+      });
+  }
 
-  // Projects
-  const [proj1, proj2, proj3] = await db.insert(projectsTable).values([
-    { title: "Q3 Revenue Push", description: "Close 5 enterprise deals and expand 3 existing accounts to hit $120k ARR target", status: "active", priority: "critical", startDate: "2026-05-01", dueDate: "2026-08-31" },
-    { title: "Product v2 Launch", description: "Ship the redesigned core product with agent orchestration and improved onboarding", status: "active", priority: "high", startDate: "2026-04-15", dueDate: "2026-07-15" },
-    { title: "GTM Playbook", description: "Build repeatable go-to-market motion with documented ICP, messaging, and outbound sequences", status: "planning", priority: "medium", startDate: "2026-06-01", dueDate: "2026-09-01" },
-    { title: "Infrastructure Scale-Up", description: "Migrate to multi-region deployment and establish 99.9% uptime SLA", status: "on_hold", priority: "high", dueDate: "2026-10-01" },
-  ]).returning().onConflictDoNothing();
+  // Retire departments from older seeds that no longer exist in the MVP.
+  const keepSlugs = departments.map((d) => d.slug);
+  const allDepartments = await db.select().from(departmentsTable);
+  for (const dept of allDepartments) {
+    if (!keepSlugs.includes(dept.slug) && dept.isActive) {
+      await db.update(departmentsTable).set({ isActive: false }).where(sql`${departmentsTable.id} = ${dept.id}`);
+    }
+  }
 
-  // Tasks
-  await db.insert(tasksTable).values([
-    { projectId: proj1?.id, title: "Send proposals to Acme Corp and TechFlow", status: "in_progress", priority: "critical" },
-    { projectId: proj1?.id, title: "Schedule demo calls with 3 qualified leads", status: "todo", priority: "high" },
-    { projectId: proj1?.id, title: "Update CRM with all Q2 meeting notes", status: "done", priority: "medium" },
-    { projectId: proj1?.id, title: "Negotiate contract terms with DataCo", status: "review", priority: "critical" },
-    { projectId: proj2?.id, title: "Finalize agent orchestration architecture", status: "done", priority: "critical" },
-    { projectId: proj2?.id, title: "Build onboarding wizard flow", status: "in_progress", priority: "high" },
-    { projectId: proj2?.id, title: "Write API documentation", status: "todo", priority: "medium" },
-    { projectId: proj2?.id, title: "Performance testing — 1000 concurrent users", status: "todo", priority: "high" },
-    { projectId: proj3?.id, title: "Define Ideal Customer Profile (ICP)", status: "in_progress", priority: "high" },
-    { projectId: proj3?.id, title: "Write 5 cold email sequences", status: "todo", priority: "medium" },
-    { title: "Review investor update draft", status: "todo", priority: "high" },
-    { title: "Prepare board deck for Q3", status: "todo", priority: "medium" },
-  ]).onConflictDoNothing();
+  const deptBySlug = Object.fromEntries(allDepartments.map((d) => [d.slug, d]));
 
-  // Leads
-  const [lead1, lead2, lead3] = await db.insert(leadsTable).values([
-    { name: "Sarah Chen", email: "sarah@nexuslabs.io", company: "Nexus Labs", status: "qualified", score: 87, sentiment: "positive", estimatedValue: "45000", source: "inbound", notes: "CTO at Series A startup, evaluating FounderOS for team of 12. Hot lead — demo scheduled." },
-    { name: "Marcus Webb", email: "m.webb@dataflow.com", company: "DataFlow Inc", status: "proposal", score: 92, sentiment: "positive", estimatedValue: "78000", source: "referral", notes: "VP of Product, referred by existing customer. Proposal sent 3 days ago, awaiting response." },
-    { name: "Priya Sharma", email: "priya@scalevault.com", company: "Scale Vault", status: "contacted", score: 64, sentiment: "neutral", estimatedValue: "22000", source: "outbound", notes: "Founder of bootstrapped SaaS, budget conscious but high potential for expansion." },
-    { name: "Tom Bradley", email: "tom@acmecorp.io", company: "Acme Corp", status: "new", score: 45, sentiment: "neutral", estimatedValue: "15000", source: "linkedin", notes: "Downloaded whitepaper, not yet engaged in conversation." },
-    { name: "Elena Rodriguez", email: "elena@techflow.ai", company: "TechFlow AI", status: "won", score: 95, sentiment: "positive", estimatedValue: "60000", source: "conference", notes: "Closed! Annual contract signed. Onboarding starts June 1." },
-    { name: "James Kim", email: "james@launchpad.co", company: "LaunchPad", status: "lost", score: 30, sentiment: "negative", estimatedValue: "12000", source: "outbound", notes: "Went with competitor due to pricing. Potential re-engagement in 6 months." },
-  ]).returning().onConflictDoNothing();
+  // Agents (system structure — required for orchestrator / Sales agent).
+  const agents = [
+    { name: "EA — Executive Assistant", slug: "ea", departmentId: deptBySlug["executive-assistant"].id, description: "Your right hand. Coordinates departments and keeps the company's memory.", status: "active", modelTier: "standard", capabilities: ["orchestration", "memory", "task_capture", "lead_capture"] },
+    { name: "Alex — Sales Intelligence", slug: "alex-sales", departmentId: deptBySlug["sales"].id, description: "Scans the pipeline for deals going quiet, drafts follow-ups, scores leads, and schedules proposal nudges.", status: "idle", modelTier: "standard", capabilities: ["stale_deal_detection", "follow_up_drafting", "lead_scoring", "proposal_follow_through"] },
+    { name: "Max — Growth Engine", slug: "max-growth", departmentId: deptBySlug["marketing"].id, description: "Coming soon: market analysis, content strategy, campaign optimization.", status: "offline", modelTier: "premium", capabilities: ["market_research", "content_generation"] },
+    { name: "Riley — Ops Commander", slug: "riley-ops", departmentId: deptBySlug["operations"].id, description: "Coming soon: workflow automation, deadline tracking, execution health.", status: "offline", modelTier: "lightweight", capabilities: ["workflow_automation", "deadline_tracking"] },
+    { name: "Sam — Strategy Analyst", slug: "sam-strategy", departmentId: deptBySlug["strategy"].id, description: "Coming soon: bottleneck detection, opportunity surfacing, recommendations.", status: "offline", modelTier: "standard", capabilities: ["bottleneck_detection", "opportunity_surfacing"] },
+  ];
 
-  // Opportunities
-  await db.insert(opportunitiesTable).values([
-    { leadId: lead1?.id, title: "Nexus Labs — Enterprise License", status: "pursuing", value: "45000", probability: 75, expectedCloseDate: "2026-07-30", description: "12-seat enterprise license with custom agent configuration" },
-    { leadId: lead2?.id, title: "DataFlow Inc — Platform Deal", status: "pursuing", value: "78000", probability: 85, expectedCloseDate: "2026-06-30", description: "Annual platform deal with dedicated agent deployment" },
-    { leadId: lead3?.id, title: "Scale Vault — Starter Package", status: "evaluating", value: "22000", probability: 40, expectedCloseDate: "2026-08-15", description: "3-seat starter package with growth expansion clause" },
-    { title: "Referral Network Expansion", status: "identified", value: "150000", probability: 30, description: "Systematic referral program through existing customer base" },
-  ]).onConflictDoNothing();
+  for (const agent of agents) {
+    await db
+      .insert(agentsTable)
+      .values(agent)
+      .onConflictDoUpdate({
+        target: agentsTable.slug,
+        set: {
+          name: agent.name,
+          departmentId: agent.departmentId,
+          description: agent.description,
+          status: agent.status,
+          modelTier: agent.modelTier,
+          capabilities: agent.capabilities,
+          updatedAt: sql`now()`,
+        },
+      });
+  }
 
-  // Workflows
-  await db.insert(workflowsTable).values([
-    { name: "New Lead Notification", triggerEvent: "lead.created", isActive: true, runCount: 23, steps: [{ type: "notify", channel: "dashboard", message: "New lead added: {{lead.name}} from {{lead.company}}" }, { type: "assign_score", agent: "alex-sales" }] },
-    { name: "Proposal Follow-Up Sequence", triggerEvent: "proposal.sent", isActive: true, runCount: 8, steps: [{ type: "wait", duration: "3d" }, { type: "notify", priority: "high", message: "Follow up on proposal for {{lead.name}}" }] },
-    { name: "Weekly Revenue Summary", triggerEvent: "schedule.weekly", isActive: true, runCount: 12, steps: [{ type: "generate_report", reportType: "revenue" }, { type: "notify", channel: "dashboard" }] },
-    { name: "Deal Won Celebration", triggerEvent: "lead.won", isActive: true, runCount: 5, steps: [{ type: "notify", priority: "high", message: "Deal closed! {{lead.name}} is now a customer." }, { type: "create_project", template: "onboarding" }] },
-    { name: "Overdue Task Escalation", triggerEvent: "schedule.daily", isActive: false, runCount: 0, steps: [{ type: "check_overdue_tasks" }, { type: "notify", priority: "urgent" }] },
-  ]).onConflictDoNothing();
+  // Agents from older seeds that no longer have a department go offline.
+  const agentSlugs = agents.map((a) => a.slug);
+  const allAgents = await db.select().from(agentsTable);
+  for (const agent of allAgents) {
+    if (!agentSlugs.includes(agent.slug)) {
+      await db.update(agentsTable).set({ status: "offline" }).where(sql`${agentsTable.id} = ${agent.id}`);
+    }
+  }
 
-  // Notifications
-  await db.insert(notificationsTable).values([
-    { type: "lead_update", title: "Hot lead ready for follow-up", body: "Marcus Webb has viewed your proposal twice in the last 24 hours. Time to call.", priority: "urgent", isRead: false, actionUrl: "/leads" },
-    { type: "deal_alert", title: "Deal closing window — DataFlow Inc", body: "Proposal expires in 3 days. Schedule a close call now.", priority: "high", isRead: false, actionUrl: "/pipeline" },
-    { type: "task_overdue", title: "2 tasks are past due", body: "\"Negotiate contract terms with DataCo\" and \"Schedule demo calls\" need attention.", priority: "high", isRead: false, actionUrl: "/tasks" },
-    { type: "agent_report", title: "Alex completed lead scoring", body: "Sales agent scored 6 new leads. 2 rated high-priority.", priority: "medium", isRead: false },
-    { type: "workflow", title: "Weekly revenue report generated", body: "Your Q2 revenue summary is ready to review.", priority: "low", isRead: true },
-    { type: "system", title: "FounderOS is fully operational", body: "All 5 agents are online. Workflows are running. Command center is ready.", priority: "low", isRead: true },
-  ]).onConflictDoNothing();
+  if (DEMO) {
+    console.log("Seeding demo pipeline (--demo)...");
+    const leads = await db
+      .insert(leadsTable)
+      .values([
+        { name: "Priya Sharma", company: "Nimbus Labs", email: "priya@nimbuslabs.io", status: "qualified", source: "referral", score: 78, sentiment: "positive", estimatedValue: "18000", notes: "Wants a pilot in Q4. Asked for two case studies and pricing for 10 seats.", lastContactedAt: daysAgo(9), createdAt: daysAgo(21) },
+        { name: "Daniel Reyes", company: "Harbor Freight Logistics", email: "daniel.reyes@harborfreight.co", status: "proposal", source: "inbound", score: 84, sentiment: "positive", estimatedValue: "32000", notes: "Proposal covers warehouse automation pilot. Decision maker is the COO.", lastContactedAt: daysAgo(6), createdAt: daysAgo(30) },
+        { name: "Mei Tanaka", company: "Orbit Studio", email: "mei@orbit.studio", status: "contacted", source: "conference", score: 55, sentiment: "neutral", estimatedValue: "7500", notes: "Met at SaaStr. Interested but budget cycle starts next quarter.", lastContactedAt: daysAgo(2), createdAt: daysAgo(8) },
+        { name: "Tom Becker", company: "Becker & Co", email: "tom@beckerco.com", status: "new", source: "website", score: 42, estimatedValue: "4000", notes: "Filled out the demo form. No reply to the intro email yet.", lastContactedAt: null, createdAt: daysAgo(5) },
+        { name: "Sofia Alvarez", company: "Greenline Energy", email: "sofia@greenline.energy", status: "won", source: "referral", score: 95, sentiment: "positive", estimatedValue: "25000", notes: "Signed annual plan. Kickoff scheduled.", lastContactedAt: daysAgo(10), createdAt: daysAgo(45) },
+        { name: "Arjun Mehta", company: "Stackline", email: "arjun@stackline.dev", status: "qualified", source: "linkedin", score: 70, sentiment: "positive", estimatedValue: "12000", notes: "Technical evaluation in progress with their eng lead.", lastContactedAt: daysAgo(1), createdAt: daysAgo(14) },
+        { name: "Lena Fischer", company: "Kite Analytics", email: "lena@kite.io", status: "lost", source: "cold outreach", score: 20, sentiment: "negative", estimatedValue: "9000", notes: "Went with an incumbent vendor.", lastContactedAt: daysAgo(20), createdAt: daysAgo(40) },
+        { name: "Omar Haddad", company: "Pulse Health", email: "omar@pulsehealth.com", status: "contacted", source: "referral", score: 61, sentiment: "neutral", estimatedValue: "15000", notes: "Had a discovery call. Said he'd loop in his CTO.", lastContactedAt: daysAgo(12), createdAt: daysAgo(25) },
+      ])
+      .returning();
 
-  // Revenue
-  const today = new Date();
-  const fmt = (offset: number) => {
-    const d = new Date(today);
-    d.setMonth(d.getMonth() + offset);
-    return d.toISOString().slice(0, 10);
-  };
-  await db.insert(revenueTable).values([
-    { leadId: lead3?.id ?? null, type: "one_time", amount: "60000", status: "received", date: fmt(-2), description: "TechFlow AI — annual license (closed)" },
-    { type: "recurring", amount: "8500", status: "received", date: fmt(-1), description: "Recurring MRR from existing customers" },
-    { type: "recurring", amount: "9200", status: "received", date: fmt(0), description: "MRR — May 2026" },
-    { leadId: lead2?.id ?? null, type: "one_time", amount: "78000", status: "invoiced", date: fmt(0), description: "DataFlow Inc — pending signature" },
-    { leadId: lead1?.id ?? null, type: "one_time", amount: "45000", status: "projected", date: fmt(1), description: "Nexus Labs — deal in progress" },
-    { type: "recurring", amount: "12000", status: "projected", date: fmt(1), description: "Projected MRR growth — June" },
-    { type: "recurring", amount: "15000", status: "projected", date: fmt(2), description: "Projected MRR — July" },
-    { type: "one_time", amount: "22000", status: "projected", date: fmt(2), description: "Scale Vault — potential close" },
-  ]).onConflictDoNothing();
+    const daniel = leads.find((l) => l.name === "Daniel Reyes");
+    const sofia = leads.find((l) => l.name === "Sofia Alvarez");
 
-  console.log("Seed complete!");
+    await db.insert(proposalsTable).values([
+      { leadId: daniel?.id, title: "Warehouse automation pilot — Harbor Freight", status: "sent", value: "32000", content: "90-day pilot across two warehouses with weekly reporting.", sentAt: daysAgo(6), createdAt: daysAgo(7) },
+      { leadId: sofia?.id, title: "Greenline Energy annual plan", status: "accepted", value: "25000", content: "Annual plan, 25 seats.", sentAt: daysAgo(18), responseAt: daysAgo(12), createdAt: daysAgo(19) },
+    ]);
+
+    await db.insert(tasksTable).values([
+      { title: "Send Priya the two case studies she asked for", description: "Nimbus Labs pilot — she wanted the fintech and logistics case studies.", priority: "high", status: "todo", dueDate: daysAgo(-1) },
+      { title: "Prep kickoff deck for Greenline Energy", priority: "medium", status: "in_progress", dueDate: daysAgo(-4) },
+    ]);
+  }
+
+  console.log(
+    `Seed complete — ${DEMO ? "demo pipeline loaded; " : "operational tables cleared; "}departments and agents initialized (Sales + EA live, others coming soon).`,
+  );
 }
 
 seed()

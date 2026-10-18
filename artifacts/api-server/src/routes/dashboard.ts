@@ -3,6 +3,8 @@ import { isNull, eq, and, gte, sql } from "drizzle-orm";
 import { db, projectsTable, tasksTable, leadsTable, revenueTable, agentsTable, notificationsTable, activitiesTable } from "@workspace/db";
 import { GetDashboardSummaryResponse, GetDailyBriefingResponse } from "@workspace/api-zod";
 import { toJson } from "../lib/serialize";
+import { briefingEngineService } from "../services/briefing-engine";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -57,34 +59,29 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 });
 
 router.get("/dashboard/briefing", async (_req, res): Promise<void> => {
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-
-  const [overdueTasks, hotLeads, qualifiedLeads] = await Promise.all([
-    db.select({ count: sql<number>`count(*)::int` }).from(tasksTable)
-      .where(and(isNull(tasksTable.deletedAt), sql`${tasksTable.dueDate} < now()`, sql`${tasksTable.status} not in ('done','cancelled')`)),
-    db.select().from(leadsTable).where(and(isNull(leadsTable.deletedAt), sql`${leadsTable.score} >= 70`)).limit(3),
-    db.select({ count: sql<number>`count(*)::int` }).from(leadsTable)
-      .where(and(isNull(leadsTable.deletedAt), eq(leadsTable.status, "qualified"))),
-  ]);
-  const openOpps = qualifiedLeads;
-
-  const priorities = [
-    "Review and prioritize open tasks in your project board",
-    "Follow up with qualified leads in your pipeline",
-    "Check automation workflows are running correctly",
-  ];
-  const alerts: string[] = [];
-  if (overdueTasks[0]?.count > 0) alerts.push(`${overdueTasks[0].count} task(s) are past their due date`);
-  if (hotLeads.length > 0) alerts.push(`${hotLeads.length} high-score lead(s) ready for follow-up: ${hotLeads.map((l) => l.name).join(", ")}`);
-
-  res.json(GetDailyBriefingResponse.parse({
-    date: today,
-    summary: "Your FounderOS is fully operational. All agents are standing by. Review your priorities below to maximize execution today.",
-    topPriorities: priorities,
-    alerts: alerts.length ? alerts : ["No urgent alerts — operations running smoothly"],
-    opportunities: ["Explore automation workflows to reduce manual work", "Review revenue pipeline to identify quick wins"],
-    recommendations: ["Set up your first automation workflow for lead notifications", "Add your Q2 projects and break them into actionable tasks"],
-  }));
+  try {
+    const briefing = await briefingEngineService.getTodayBriefing();
+    // Sanitize AI-generated arrays that may contain nulls
+    for (const key of ["topPriorities", "alerts", "opportunities", "recommendations"] as const) {
+      if (Array.isArray(briefing[key])) briefing[key] = (briefing[key] as any[]).filter((x): x is string => typeof x === "string");
+    }
+    res.json(GetDailyBriefingResponse.parse(briefing));
+  } catch (err) {
+    logger.error({ err }, "Failed to generate daily briefing");
+    res.json(GetDailyBriefingResponse.parse({
+      date: new Date().toLocaleDateString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+      }),
+      summary: "FounderOS is operational. System metrics are within normal parameters.",
+      topPriorities: ["Review active projects", "Check pipeline"],
+      alerts: ["No critical disruptions."],
+      opportunities: [],
+      recommendations: ["Review dashboard for full operational snapshot."],
+      structuredRecommendations: [],
+      predictions: [],
+      decisionIQ: { leverageScore: 50, alignmentScore: 50, leverageAnalysis: "Data pending.", alignmentAnalysis: "Data pending." },
+    }));
+  }
 });
 
 export default router;

@@ -16,6 +16,16 @@ import revenueRouter from "./revenue";
 import onboardingRouter from "./onboarding";
 import dashboardRouter from "./dashboard";
 import orchestratorRouter from "./orchestrator";
+import settingsRouter from "./settings";
+import brainRouter from "./brain";
+import plannerRouter from "./planner";
+import executionRouter from "./execution";
+import briefingRouter from "./briefing";
+import notesRouter from "./notes";
+import remindersRouter from "./reminders";
+import meetingsRouter from "./meetings";
+import teamMembersRouter from "./team-members";
+import salesRouter from "./sales";
 
 const router: IRouter = Router();
 
@@ -36,5 +46,15 @@ router.use(activitiesRouter);
 router.use(revenueRouter);
 router.use(onboardingRouter);
 router.use(orchestratorRouter);
+router.use(settingsRouter);
+router.use(brainRouter);
+router.use(plannerRouter);
+router.use(executionRouter);
+router.use(briefingRouter);
+router.use(notesRouter);
+router.use(remindersRouter);
+router.use(meetingsRouter);
+router.use(teamMembersRouter);
+router.use(salesRouter);
 
 export default router;

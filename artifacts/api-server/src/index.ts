@@ -1,5 +1,51 @@
-import app from "./app";
-import { logger } from "./lib/logger";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+function loadEnv() {
+  const dir = import.meta.dirname ?? process.cwd();
+  const searchPaths = [
+    process.cwd(),
+    dir,
+    resolve(dir, ".."),
+    resolve(dir, "../.."),
+    resolve(dir, "../../.."),
+  ];
+
+  for (const dir of searchPaths) {
+    const envFile = resolve(dir, ".env");
+    if (!existsSync(envFile)) continue;
+    const content = readFileSync(envFile, "utf-8");
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+      const eqIndex = trimmed.indexOf("=");
+      const key = trimmed.slice(0, eqIndex).trim();
+      const value = trimmed.slice(eqIndex + 1).trim().replace(/^["']|["']$/g, "");
+      if (key && value && !process.env[key]) process.env[key] = value;
+    }
+    console.log(`[env] Loaded ${envFile}`);
+    return;
+  }
+  console.warn("[env] No .env file found");
+}
+
+loadEnv();
+
+const { default: app } = await import("./app");
+const { logger } = await import("./lib/logger");
+
+// Activate the Event Bus → Workflow Engine wiring so domain events
+// (task.created, department.created, lead.created, ...) can trigger workflows.
+const { workflowEngine } = await import("./services/workflow-engine");
+workflowEngine.initialize();
+
+// Activate the Company Brain event sync so memory stays current automatically.
+const { registerBrainEventSync } = await import("./services/brain-event-sync");
+registerBrainEventSync();
+
+// Activate the Sales agent: stale-deal scans, proposal follow-through, lead scoring.
+const { salesAgent } = await import("./services/sales-agent");
+salesAgent.start();
 
 const rawPort = process.env["PORT"];
 

@@ -15,6 +15,7 @@ import {
   GetLeadPipelineResponse,
 } from "@workspace/api-zod";
 import { logActivity } from "../lib/activity-logger";
+import { publishOperationalEvent } from "../lib/event-bus";
 
 const router = Router();
 
@@ -41,6 +42,7 @@ router.post("/leads", async (req, res): Promise<void> => {
   const insertData = { ...parsed.data, estimatedValue: parsed.data.estimatedValue != null ? String(parsed.data.estimatedValue) : undefined };
   const [lead] = await db.insert(leadsTable).values(insertData).returning();
   await logActivity({ entityType: "lead", entityId: lead.id, action: "created", details: { name: lead.name } });
+  publishOperationalEvent("lead.created", { leadId: lead.id, name: lead.name, company: lead.company });
   res.status(201).json(GetLeadResponse.parse(toJson({ ...lead, estimatedValue: lead.estimatedValue ? Number(lead.estimatedValue) : null })));
 });
 

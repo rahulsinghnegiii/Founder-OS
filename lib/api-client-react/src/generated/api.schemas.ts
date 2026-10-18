@@ -50,6 +50,102 @@ export interface DashboardSummary {
   recentActivities?: Activity[];
 }
 
+export type DailyBriefingHighestPriorityTasksPriority = typeof DailyBriefingHighestPriorityTasksPriority[keyof typeof DailyBriefingHighestPriorityTasksPriority];
+
+
+export const DailyBriefingHighestPriorityTasksPriority = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type DailyBriefingHighestPriorityTasks = {
+  title: string;
+  items: string[];
+  priority: DailyBriefingHighestPriorityTasksPriority;
+};
+
+export type DailyBriefingBlockedProjectsPriority = typeof DailyBriefingBlockedProjectsPriority[keyof typeof DailyBriefingBlockedProjectsPriority];
+
+
+export const DailyBriefingBlockedProjectsPriority = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type DailyBriefingBlockedProjects = {
+  title: string;
+  items: string[];
+  priority: DailyBriefingBlockedProjectsPriority;
+};
+
+export type DailyBriefingUpcomingDeadlinesPriority = typeof DailyBriefingUpcomingDeadlinesPriority[keyof typeof DailyBriefingUpcomingDeadlinesPriority];
+
+
+export const DailyBriefingUpcomingDeadlinesPriority = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type DailyBriefingUpcomingDeadlines = {
+  title: string;
+  items: string[];
+  priority: DailyBriefingUpcomingDeadlinesPriority;
+};
+
+export type DailyBriefingFollowUpsRequiredPriority = typeof DailyBriefingFollowUpsRequiredPriority[keyof typeof DailyBriefingFollowUpsRequiredPriority];
+
+
+export const DailyBriefingFollowUpsRequiredPriority = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type DailyBriefingFollowUpsRequired = {
+  title: string;
+  items: string[];
+  priority: DailyBriefingFollowUpsRequiredPriority;
+};
+
+export type DailyBriefingBusinessHealthSummaryPriority = typeof DailyBriefingBusinessHealthSummaryPriority[keyof typeof DailyBriefingBusinessHealthSummaryPriority];
+
+
+export const DailyBriefingBusinessHealthSummaryPriority = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type DailyBriefingBusinessHealthSummary = {
+  title: string;
+  items: string[];
+  priority: DailyBriefingBusinessHealthSummaryPriority;
+};
+
+export type DailyBriefingAiRecommendationsPriority = typeof DailyBriefingAiRecommendationsPriority[keyof typeof DailyBriefingAiRecommendationsPriority];
+
+
+export const DailyBriefingAiRecommendationsPriority = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type DailyBriefingAiRecommendations = {
+  title: string;
+  items: string[];
+  priority: DailyBriefingAiRecommendationsPriority;
+};
+
 export interface DailyBriefing {
   date: string;
   summary: string;
@@ -57,6 +153,14 @@ export interface DailyBriefing {
   alerts: string[];
   opportunities: string[];
   recommendations?: string[];
+  highestPriorityTasks?: DailyBriefingHighestPriorityTasks;
+  blockedProjects?: DailyBriefingBlockedProjects;
+  upcomingDeadlines?: DailyBriefingUpcomingDeadlines;
+  followUpsRequired?: DailyBriefingFollowUpsRequired;
+  businessHealthSummary?: DailyBriefingBusinessHealthSummary;
+  aiRecommendations?: DailyBriefingAiRecommendations;
+  suggestedFocus?: string;
+  generatedAt?: string;
 }
 
 export interface BatchResult {
@@ -96,6 +200,7 @@ export const AgentStatus = {
   idle: 'idle',
   active: 'active',
   busy: 'busy',
+  offline: 'offline',
   error: 'error',
 } as const;
 

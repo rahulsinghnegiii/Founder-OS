@@ -17,20 +17,20 @@ export default function Pipeline() {
   const { data: opportunities = [], isLoading } = useListOpportunities();
 
   return (
-    <div className="space-y-6 h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Revenue Pipeline</h1>
         <p className="text-muted-foreground">Track deal flow and projected revenue.</p>
       </div>
 
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-4 min-w-max h-full pb-4">
+      <div className="-mx-1 overflow-x-auto px-1 pb-2">
+        <div className="flex items-start gap-4 pb-4">
           {PIPELINE_STAGES.map((stage) => {
             const stageOpps = opportunities.filter(o => o.status === stage.id);
             const stageValue = stageOpps.reduce((sum, o) => sum + (o.value || 0), 0);
             
             return (
-              <div key={stage.id} className="w-80 flex flex-col gap-3 bg-secondary/10 rounded-lg p-3 border border-border/30">
+              <div key={stage.id} className="flex w-[300px] shrink-0 flex-col gap-3 rounded-lg border border-border/30 bg-secondary/10 p-3">
                 <div className="flex items-center justify-between px-1 mb-2">
                   <div>
                     <h3 className="font-semibold text-sm">{stage.label}</h3>
@@ -41,7 +41,7 @@ export default function Pipeline() {
                   </Badge>
                 </div>
                 
-                <div className="flex flex-col gap-3 overflow-y-auto flex-1 pr-1">
+                <div className="flex flex-col gap-3">
                   {isLoading ? (
                     <Skeleton className="h-32 w-full rounded-md" />
                   ) : (

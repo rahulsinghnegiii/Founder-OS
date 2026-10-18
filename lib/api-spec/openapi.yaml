@@ -1176,6 +1176,90 @@ components:
           type: array
           items:
             type: string
+        # New executive briefing fields
+        highestPriorityTasks:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              items:
+                type: string
+            priority:
+              type: string
+              enum: [critical, high, medium, low]
+          required: [title, items, priority]
+        blockedProjects:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              items:
+                type: string
+            priority:
+              type: string
+              enum: [critical, high, medium, low]
+          required: [title, items, priority]
+        upcomingDeadlines:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              items:
+                type: string
+            priority:
+              type: string
+              enum: [critical, high, medium, low]
+          required: [title, items, priority]
+        followUpsRequired:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              items:
+                type: string
+            priority:
+              type: string
+              enum: [critical, high, medium, low]
+          required: [title, items, priority]
+        businessHealthSummary:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              items:
+                type: string
+            priority:
+              type: string
+              enum: [critical, high, medium, low]
+          required: [title, items, priority]
+        aiRecommendations:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              items:
+                type: string
+            priority:
+              type: string
+              enum: [critical, high, medium, low]
+          required: [title, items, priority]
+        suggestedFocus:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
 
     StatusCount:
       type: object
@@ -1257,7 +1341,7 @@ components:
           type: ["string", "null"]
         status:
           type: string
-          enum: [idle, active, busy, error]
+          enum: [idle, active, busy, offline, error]
         modelTier:
           type: string
           enum: [lightweight, standard, premium]

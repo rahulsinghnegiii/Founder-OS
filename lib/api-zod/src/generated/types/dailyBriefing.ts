@@ -5,6 +5,12 @@
  * FounderOS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DailyBriefingAiRecommendations } from './dailyBriefingAiRecommendations';
+import type { DailyBriefingBlockedProjects } from './dailyBriefingBlockedProjects';
+import type { DailyBriefingBusinessHealthSummary } from './dailyBriefingBusinessHealthSummary';
+import type { DailyBriefingFollowUpsRequired } from './dailyBriefingFollowUpsRequired';
+import type { DailyBriefingHighestPriorityTasks } from './dailyBriefingHighestPriorityTasks';
+import type { DailyBriefingUpcomingDeadlines } from './dailyBriefingUpcomingDeadlines';
 
 export interface DailyBriefing {
   date: string;
@@ -13,4 +19,12 @@ export interface DailyBriefing {
   alerts: string[];
   opportunities: string[];
   recommendations?: string[];
+  highestPriorityTasks?: DailyBriefingHighestPriorityTasks;
+  blockedProjects?: DailyBriefingBlockedProjects;
+  upcomingDeadlines?: DailyBriefingUpcomingDeadlines;
+  followUpsRequired?: DailyBriefingFollowUpsRequired;
+  businessHealthSummary?: DailyBriefingBusinessHealthSummary;
+  aiRecommendations?: DailyBriefingAiRecommendations;
+  suggestedFocus?: string;
+  generatedAt?: Date;
 }

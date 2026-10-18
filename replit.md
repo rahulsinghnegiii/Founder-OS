@@ -43,6 +43,10 @@ An AI-native operating system for founders — a dark, immersive command center 
 - `$defaultFn(() => crypto.randomUUID())` used for all primary keys (text UUIDs)
 - No auth yet — single-founder mode; all data is global
 
+## MVP scope (decided 2026-10-15)
+
+Sales-first. Only the Sales department (agent `alex-sales`, `services/sales-agent.ts`, routes `/api/sales/*`) and the Executive Assistant are live. Marketing/Operations/Strategy are seeded `isActive=false` and render as "coming soon"; parked pages route to `pages/coming-soon.tsx`. Orchestrator only delegates to Sales + EA and tells the founder when a request targets a department that is not live yet.
+
 ## Product
 
 - **Command Center (Dashboard)** — live metrics, AI daily briefing, activity feed

@@ -9,7 +9,7 @@ export default function Tasks() {
   const { data: tasks = [], isLoading } = useListTasks();
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">Tasks</h1>
@@ -17,7 +17,7 @@ export default function Tasks() {
         </div>
       </div>
 
-      <div className="rounded-md border border-border/50 bg-card overflow-hidden">
+      <div className="rounded-md border border-border/50 bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border/50 hover:bg-transparent">

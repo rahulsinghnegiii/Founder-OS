@@ -64,7 +64,39 @@ export const GetDailyBriefingResponse = zod.object({
   "topPriorities": zod.array(zod.string()),
   "alerts": zod.array(zod.string()),
   "opportunities": zod.array(zod.string()),
-  "recommendations": zod.array(zod.string()).optional()
+  "recommendations": zod.array(zod.string()).optional(),
+  "highestPriorityTasks": zod.object({
+  "title": zod.string(),
+  "items": zod.array(zod.string()),
+  "priority": zod.enum(['critical', 'high', 'medium', 'low'])
+}).optional(),
+  "blockedProjects": zod.object({
+  "title": zod.string(),
+  "items": zod.array(zod.string()),
+  "priority": zod.enum(['critical', 'high', 'medium', 'low'])
+}).optional(),
+  "upcomingDeadlines": zod.object({
+  "title": zod.string(),
+  "items": zod.array(zod.string()),
+  "priority": zod.enum(['critical', 'high', 'medium', 'low'])
+}).optional(),
+  "followUpsRequired": zod.object({
+  "title": zod.string(),
+  "items": zod.array(zod.string()),
+  "priority": zod.enum(['critical', 'high', 'medium', 'low'])
+}).optional(),
+  "businessHealthSummary": zod.object({
+  "title": zod.string(),
+  "items": zod.array(zod.string()),
+  "priority": zod.enum(['critical', 'high', 'medium', 'low'])
+}).optional(),
+  "aiRecommendations": zod.object({
+  "title": zod.string(),
+  "items": zod.array(zod.string()),
+  "priority": zod.enum(['critical', 'high', 'medium', 'low'])
+}).optional(),
+  "suggestedFocus": zod.string().optional(),
+  "generatedAt": zod.coerce.date().optional()
 })
 
 
@@ -139,7 +171,7 @@ export const ListAgentsResponseItem = zod.object({
   "description": zod.string().nullish(),
   "departmentId": zod.string().nullish(),
   "departmentName": zod.string().nullish(),
-  "status": zod.enum(['idle', 'active', 'busy', 'error']),
+  "status": zod.enum(['idle', 'active', 'busy', 'offline', 'error']),
   "modelTier": zod.enum(['lightweight', 'standard', 'premium']),
   "capabilities": zod.array(zod.string()).optional(),
   "lastActiveAt": zod.string().nullish(),
@@ -159,7 +191,7 @@ export const GetAgentResponse = zod.object({
   "description": zod.string().nullish(),
   "departmentId": zod.string().nullish(),
   "departmentName": zod.string().nullish(),
-  "status": zod.enum(['idle', 'active', 'busy', 'error']),
+  "status": zod.enum(['idle', 'active', 'busy', 'offline', 'error']),
   "modelTier": zod.enum(['lightweight', 'standard', 'premium']),
   "capabilities": zod.array(zod.string()).optional(),
   "lastActiveAt": zod.string().nullish(),

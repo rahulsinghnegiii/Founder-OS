@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { FileText, Plus, FileBarChart } from 'lucide-react';
+import { EmptyState } from '@/components/hq/primitives';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Reports() {
@@ -42,12 +43,16 @@ export default function Reports() {
           <Skeleton className="h-48 w-full" />
         </div>
       ) : reports.length === 0 ? (
-        <Card className="bg-card border-border/50">
-          <CardContent className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <FileBarChart className="w-12 h-12 mb-4 opacity-20" />
-            <p>No reports generated yet.</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={FileBarChart}
+          title="No reports generated yet"
+          description="Generate your first weekly summary to surface business intelligence across the organization."
+          action={
+            <Button onClick={handleGenerate} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Plus className="w-4 h-4 mr-2" /> Generate Report
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {reports.map((report) => (

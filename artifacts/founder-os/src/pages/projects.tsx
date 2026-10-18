@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { Briefcase } from 'lucide-react';
 import { useListProjects } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/hq/primitives';
 
 export default function Projects() {
   const { data: projects = [], isLoading } = useListProjects();
@@ -22,6 +24,12 @@ export default function Projects() {
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-48 w-full" />
         </div>
+      ) : projects.length === 0 ? (
+        <EmptyState
+          icon={Briefcase}
+          title="No active projects"
+          description="Create your first project from the EA Desk to start tracking initiatives across the organization."
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (
