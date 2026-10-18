@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.git
+.env
+.env.*
+*.log
+.playwright-mcp
+.opencode
+UI
+docs
+attached_assets
+.replit
+.replitignore
+start.ps1
+artifacts/mockup-sandbox

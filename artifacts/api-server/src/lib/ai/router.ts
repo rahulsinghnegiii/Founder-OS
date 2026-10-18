@@ -1,74 +1,86 @@
-import { providerFactory } from "./providers";
-import type { AIMessage, AICallOptions, AICallResult } from "./types";
+import Anthropic from "@anthropic-ai/sdk";
+import { providerFactory, NO_PROVIDER_MESSAGE } from "./providers";
+import { estimateCost } from "./models";
+import type { AIMessage, AICallOptions, AICallResult, ProviderName } from "./types";
 import { logger } from "../logger";
+
+function describeError(provider: ProviderName, err: unknown): string {
+  if (provider === "none") return NO_PROVIDER_MESSAGE;
+
+  if (err instanceof Anthropic.AuthenticationError) {
+    return "Anthropic rejected the API key. Check ANTHROPIC_API_KEY in your .env.";
+  }
+  if (err instanceof Anthropic.RateLimitError) {
+    return "Anthropic rate limit reached. Try again in a moment.";
+  }
+  if (err instanceof Anthropic.APIConnectionError) {
+    return "Cannot reach the Anthropic API. Check your network connection.";
+  }
+  if (err instanceof Anthropic.APIError) {
+    return `Anthropic API error ${err.status ?? ""}: ${err.message}`.trim();
+  }
+
+  const message = err instanceof Error ? err.message : String(err);
+  if (/401|403|unauthori[sz]ed|invalid api key|authentication/i.test(message)) {
+    return `The ${provider} provider rejected the credential. Check the matching key in your .env.`;
+  }
+  if (/ENOTFOUND|ECONNREFUSED|fetch failed|network|abort|timeout/i.test(message)) {
+    return `Cannot reach the ${provider} provider. Check your network${provider === "ollama" ? " and that Ollama is running" : ""}.`;
+  }
+  return message;
+}
 
 export async function callAIWithRouting(
   messages: AIMessage[],
   options: AICallOptions = {},
 ): Promise<AICallResult> {
   const startTime = Date.now();
+  const provider = providerFactory.getProvider(options.provider);
   const systemBrief = messages.find((m) => m.role === "system")?.content.slice(0, 80);
   const userBrief = messages.find((m) => m.role === "user")?.content.slice(0, 80);
 
   logger.info(
-    { jsonMode: options.jsonMode, model: options.model, systemBrief, userBrief },
+    { provider: provider.name, jsonMode: options.jsonMode, model: options.model ?? provider.defaultModel, systemBrief, userBrief },
     "callAI invoked",
   );
 
   if (process.env.DEBUG_AI === "1") {
     for (const m of messages) {
-      logger.info(
-        { role: m.role, content: m.content },
-        `[DEBUG-AI] prompt message (${m.role})`,
-      );
+      logger.info({ role: m.role, content: m.content }, `[DEBUG-AI] prompt message (${m.role})`);
     }
   }
 
   try {
-    const provider = providerFactory.getProvider();
     const result = await provider.chatCompletions(messages, options);
-
-    const elapsed = Date.now() - startTime;
+    const latencyMs = Date.now() - startTime;
     logger.info(
-      { replyLength: result.reply.length, model: result.model, latencyMs: elapsed },
+      { provider: provider.name, replyLength: result.reply.length, model: result.model, latencyMs },
       "callAI completed",
     );
-
     return {
       reply: result.reply,
       model: result.model,
-      provider: "puter",
-      tokensUsed: result.tokensUsed,
-      cost: 0,
-      latencyMs: elapsed,
+      provider: provider.name,
+      tokensUsed: result.inputTokens + result.outputTokens,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      cost: estimateCost(result.model, result.inputTokens, result.outputTokens),
+      latencyMs,
     };
   } catch (err) {
-    const elapsed = Date.now() - startTime;
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error({ err, latencyMs: elapsed }, "callAI failed with exception");
-
-    let userMessage: string;
-    if (
-      /401|403|auth|token/i.test(message)
-    ) {
-      userMessage =
-        "Puter API authentication failed. Set a valid PUTER_AUTH_TOKEN in your .env file.";
-    } else if (
-      /fetch|network|ENOTFOUND|ECONNREFUSED|abort|timeout/i.test(message)
-    ) {
-      userMessage =
-        "Cannot reach Puter API. Check your network and PUTER_API_ORIGIN (default: https://api.puter.com)";
-    } else {
-      userMessage = `Puter API error: ${message}`;
-    }
-
+    const latencyMs = Date.now() - startTime;
+    const message = describeError(provider.name, err);
+    logger.error({ err, provider: provider.name, latencyMs }, "callAI failed");
     return {
-      reply: userMessage,
-      model: options.model ?? "unknown",
-      provider: "puter",
+      reply: message,
+      model: options.model ?? provider.defaultModel,
+      provider: provider.name,
       tokensUsed: 0,
+      inputTokens: 0,
+      outputTokens: 0,
       cost: 0,
-      latencyMs: elapsed,
+      latencyMs,
+      error: message,
     };
   }
 }

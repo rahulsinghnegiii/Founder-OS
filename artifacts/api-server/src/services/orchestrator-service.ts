@@ -6,6 +6,7 @@ import { operationalIntelligenceService } from "./operational-intelligence";
 import { createOperationalNotification } from "./notification-service";
 import { warRoomService } from "./war-room-service";
 import { salesAgent } from "./sales-agent";
+import { getFounderName, founderPossessive } from "../lib/founder";
 import { ilike } from "drizzle-orm";
 import { db, leadsTable } from "@workspace/db";
 import { callAI } from "../lib/ai";
@@ -585,16 +586,17 @@ async function buildCasualReply(
   kind: "greeting" | "small_talk",
   context?: string,
 ): Promise<string> {
+  const founderName = await getFounderName();
   const persona =
     kind === "greeting"
-      ? "This is a casual greeting. Respond like a warm, smart friend or ChatGPT. 1-2 short sentences. Use the founder's name 'Rahul' when natural. Be upbeat but not over-the-top. No strategy, no lists, no operational planning."
+      ? `This is a casual greeting. Respond like a warm, smart friend or ChatGPT. 1-2 short sentences.${founderName ? ` Use the founder's name '${founderName}' when natural.` : ""} Be upbeat but not over-the-top. No strategy, no lists, no operational planning.`
       : "This is small talk. Respond in a warm, natural, concise way like a smart friend or ChatGPT. 1-2 sentences. No strategy, lists, or operational planning unless the founder explicitly asks.";
 
   try {
     const result = await callAI([
       {
         role: "system",
-        content: `You are Rahul's Executive Assistant. ${persona}${context ? `\n\nFounder context (use only if relevant):\n${context}` : ""}`,
+        content: `You are ${founderPossessive(founderName)} Executive Assistant. ${persona}${context ? `\n\nFounder context (use only if relevant):\n${context}` : ""}`,
       },
       { role: "user", content: message },
     ]);
@@ -602,18 +604,19 @@ async function buildCasualReply(
   } catch (err) {
     logger.error({ err }, "Casual reply generation failed, using fallback.");
     return kind === "greeting"
-      ? "Hey Rahul! Good to see you. What would you like to work on today?"
+      ? `Hey${founderName ? ` ${founderName}` : ""}! Good to see you. What would you like to work on today?`
       : "Always happy to chat. What can I help you with?";
   }
 }
 
 async function buildAnswerReply(message: string, memoryContext: string): Promise<string> {
+  const founderName = await getFounderName();
   try {
     const result = await callAI([
       {
         role: "system",
         content:
-          "You are Rahul's Executive Assistant. Answer the founder's question clearly and concisely in a natural, friendly tone like ChatGPT or a smart friend. Use any provided context. Do not launch into strategy or planning unless asked.",
+          `You are ${founderPossessive(founderName)} Executive Assistant. Answer the founder's question clearly and concisely in a natural, friendly tone like ChatGPT or a smart friend. Use any provided context. Do not launch into strategy or planning unless asked.`,
       },
       {
         role: "user",

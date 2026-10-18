@@ -4,12 +4,16 @@ An AI-native operating system for founders — a dark, immersive command center 
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm run dev:api` / `pnpm run dev:web` — API on :5001, app on :5000 (see README for the five-minute setup)
 - `pnpm run typecheck` — full typecheck across all packages
+- `pnpm run test` — unit tests (node:test via tsx; Sales rules live in `services/sales-rules.ts`)
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm run db:push` — push DB schema changes (dev only); `pnpm run seed` / `pnpm run seed:demo`
+- `docker compose up --build` — one-command production-style run (Postgres + app in one image)
+- Required env: `DATABASE_URL`; one AI key (`ANTHROPIC_API_KEY` preferred, see `.env.example`); `APP_PASSWORD` for anything not on localhost
+- AI provider layer: `artifacts/api-server/src/lib/ai` (Anthropic SDK, OpenAI-compatible HTTP for OpenAI/OpenRouter/Groq/Ollama, legacy Puter). Auth guard: `src/lib/auth.ts` + `routes/auth.ts`, frontend `components/auth-gate.tsx`.
+- Public repo: https://github.com/rahulsinghnegiii/Founder-OS
 
 ## Stack
 
@@ -41,7 +45,7 @@ An AI-native operating system for founders — a dark, immersive command center 
 - `toJson()` wrapper required on all Drizzle query results before passing to Zod `.parse()` — Drizzle returns `Date` objects but generated Zod schemas expect ISO strings
 - `numeric` DB columns (revenue amounts) stored as strings in Postgres; converted to `Number()` in route handlers before sending to clients
 - `$defaultFn(() => crypto.randomUUID())` used for all primary keys (text UUIDs)
-- No auth yet — single-founder mode; all data is global
+- Single-founder mode; optional `APP_PASSWORD` cookie/bearer guard on `/api`; all data is global
 
 ## MVP scope (decided 2026-10-15)
 

@@ -50,7 +50,7 @@ type Session = {
 const WELCOME: ChatMsg = {
   role: "assistant",
   content:
-    "Hey Rahul — I'm your Executive Assistant. Sales is live: ask me which deals are going quiet, who to follow up with, or tell me to draft a follow-up for someone. I can also add leads, tasks, and projects.",
+    "Hey — I'm your Executive Assistant. Sales is live: ask me which deals are going quiet, who to follow up with, or tell me to draft a follow-up for someone. I can also add leads, tasks, and projects.",
 };
 
 function groupBucket(ts: string | null): "today" | "yesterday" | "last7" | "older" {

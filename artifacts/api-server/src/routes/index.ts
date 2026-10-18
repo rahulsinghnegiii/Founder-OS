@@ -26,10 +26,12 @@ import remindersRouter from "./reminders";
 import meetingsRouter from "./meetings";
 import teamMembersRouter from "./team-members";
 import salesRouter from "./sales";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
 router.use(dashboardRouter);
 router.use(departmentsRouter);
 router.use(agentsRouter);

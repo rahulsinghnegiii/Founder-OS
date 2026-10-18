@@ -16,24 +16,30 @@ import {
 } from "@workspace/db";
 
 const DEMO = process.argv.includes("--demo") || process.env.SEED_DEMO === "1";
+/** Upsert system structure (departments, agents) without touching business data. Used on container start. */
+const KEEP_DATA = process.argv.includes("--keep-data") || process.env.SEED_KEEP_DATA === "1";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS);
 
 async function seed() {
-  console.log("Resetting FounderOS data...");
+  if (KEEP_DATA) {
+    console.log("Ensuring FounderOS system structure (keeping existing data)...");
+  } else {
+    console.log("Resetting FounderOS data...");
 
-  // Operational tables are cleared on every seed so the UI only ever shows
-  // real records (or an intentional empty state). Departments + agents are
-  // the system's own structure and are upserted in place.
-  await db.delete(followUpsTable);
-  await db.delete(proposalsTable);
-  await db.delete(opportunitiesTable);
-  await db.delete(revenueTable);
-  await db.delete(notificationsTable);
-  await db.delete(workflowsTable);
-  await db.delete(tasksTable);
-  await db.delete(projectsTable);
-  await db.delete(leadsTable);
+    // Operational tables are cleared on a full seed so the UI only ever shows
+    // real records (or an intentional empty state). Departments + agents are
+    // the system's own structure and are upserted in place.
+    await db.delete(followUpsTable);
+    await db.delete(proposalsTable);
+    await db.delete(opportunitiesTable);
+    await db.delete(revenueTable);
+    await db.delete(notificationsTable);
+    await db.delete(workflowsTable);
+    await db.delete(tasksTable);
+    await db.delete(projectsTable);
+    await db.delete(leadsTable);
+  }
 
   // Departments — MVP scope: Executive Assistant + Sales are live, the rest
   // are visible as "coming soon" (isActive=false) and never receive work.
@@ -102,7 +108,10 @@ async function seed() {
     }
   }
 
-  if (DEMO) {
+  const existingLeads = KEEP_DATA ? await db.select({ id: leadsTable.id }).from(leadsTable).limit(1) : [];
+  if (DEMO && existingLeads.length > 0) {
+    console.log("Demo pipeline skipped: leads already exist.");
+  } else if (DEMO) {
     console.log("Seeding demo pipeline (--demo)...");
     const leads = await db
       .insert(leadsTable)
@@ -132,9 +141,8 @@ async function seed() {
     ]);
   }
 
-  console.log(
-    `Seed complete — ${DEMO ? "demo pipeline loaded; " : "operational tables cleared; "}departments and agents initialized (Sales + EA live, others coming soon).`,
-  );
+  const dataNote = DEMO && existingLeads.length === 0 ? "demo pipeline loaded; " : KEEP_DATA ? "existing data kept; " : "operational tables cleared; ";
+  console.log(`Seed complete — ${dataNote}departments and agents initialized (Sales + EA live, others coming soon).`);
 }
 
 seed()

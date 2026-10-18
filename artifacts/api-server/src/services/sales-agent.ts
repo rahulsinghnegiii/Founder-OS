@@ -12,46 +12,36 @@ import { callAI } from "../lib/ai";
 import { logger } from "../lib/logger";
 import { logActivity } from "../lib/activity-logger";
 import { publishOperationalEvent, subscribe } from "../lib/event-bus";
+import { getFounderName } from "../lib/founder";
 import { createOperationalNotification } from "./notification-service";
 import { memoryService } from "./memory-service";
+import {
+  ACTIVE_STAGES,
+  STAGE_LABELS,
+  assessStaleness,
+  compareStaleDeals,
+  daysBetween,
+  heuristicScore,
+  lastTouch,
+  money,
+  normalizeScore,
+  proposalFollowUpDueDate,
+  stageAfterContact,
+  type Staleness,
+} from "./sales-rules";
 
 type Lead = typeof leadsTable.$inferSelect;
 type FollowUp = typeof followUpsTable.$inferSelect;
 
-/** Stages where a lead is still "in play" and can go quiet. */
-const ACTIVE_STAGES = ["new", "contacted", "qualified", "proposal"] as const;
-
-/** Days of silence per stage before the Sales agent flags a deal. */
-const STALE_THRESHOLD_DAYS: Record<(typeof ACTIVE_STAGES)[number], number> = {
-  new: 3,
-  contacted: 5,
-  qualified: 7,
-  proposal: 4,
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  new: "New",
-  contacted: "Contacted",
-  qualified: "Qualified",
-  proposal: "Proposal sent",
-  won: "Won",
-  lost: "Lost",
-};
-
 const SALES_AGENT_SLUG = "alex-sales";
 const SALES_AGENT_NAME = "Alex — Sales Intelligence";
-const FOUNDER_NAME = process.env.FOUNDER_NAME ?? "Rahul";
 const SCAN_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const BRIEF_TTL_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type StaleDeal = {
+export type StaleDeal = Staleness & {
   lead: Lead & { estimatedValue: number | null };
   stage: string;
   stageLabel: string;
-  daysSilent: number;
-  threshold: number;
-  severity: "at_risk" | "critical";
   openDraftId: string | null;
 };
 
@@ -88,16 +78,8 @@ function serializeLead(lead: Lead): Lead & { estimatedValue: number | null } {
   };
 }
 
-function money(value: number): string {
-  return `$${Math.round(value).toLocaleString("en-US")}`;
-}
-
-function daysBetween(from: Date, to: Date): number {
-  return Math.max(0, Math.floor((to.getTime() - from.getTime()) / DAY_MS));
-}
-
-function lastTouch(lead: Lead): Date {
-  return lead.lastContactedAt ? new Date(lead.lastContactedAt) : new Date(lead.createdAt);
+function founderLabel(name: string | null): string {
+  return name ?? "the founder";
 }
 
 class SalesAgent {
@@ -177,27 +159,23 @@ class SalesAgent {
     const now = new Date();
     const stale: StaleDeal[] = [];
     for (const lead of leads) {
-      const stage = lead.status as (typeof ACTIVE_STAGES)[number];
-      const threshold = STALE_THRESHOLD_DAYS[stage] ?? 5;
-      const daysSilent = daysBetween(lastTouch(lead), now);
-      if (daysSilent < threshold) continue;
+      const staleness = assessStaleness(lead, now);
+      if (!staleness) continue;
       stale.push({
+        ...staleness,
         lead: serializeLead(lead),
-        stage,
-        stageLabel: STAGE_LABELS[stage] ?? stage,
-        daysSilent,
-        threshold,
-        severity: daysSilent >= threshold * 2 ? "critical" : "at_risk",
+        stage: lead.status,
+        stageLabel: STAGE_LABELS[lead.status] ?? lead.status,
         openDraftId: draftByLead.get(lead.id) ?? null,
       });
     }
 
-    return stale.sort((a, b) => {
-      const av = a.lead.estimatedValue ?? 0;
-      const bv = b.lead.estimatedValue ?? 0;
-      if (a.severity !== b.severity) return a.severity === "critical" ? -1 : 1;
-      return bv - av || b.daysSilent - a.daysSilent;
-    });
+    return stale.sort((a, b) =>
+      compareStaleDeals(
+        { severity: a.severity, value: a.lead.estimatedValue ?? 0, daysSilent: a.daysSilent },
+        { severity: b.severity, value: b.lead.estimatedValue ?? 0, daysSilent: b.daysSilent },
+      ),
+    );
   }
 
   // ───────────────────────────── follow-ups ─────────────────────────────
@@ -306,11 +284,7 @@ class SalesAgent {
     if (lead) {
       await db
         .update(leadsTable)
-        .set({
-          lastContactedAt: now,
-          status: lead.status === "new" ? "contacted" : lead.status,
-          updatedAt: now,
-        })
+        .set({ lastContactedAt: now, status: stageAfterContact(lead.status), updatedAt: now })
         .where(eq(leadsTable.id, lead.id));
 
       await logActivity({
@@ -318,7 +292,7 @@ class SalesAgent {
         entityId: lead.id,
         action: "follow_up_sent",
         actorType: "user",
-        actorName: FOUNDER_NAME,
+        actorName: founderLabel(await getFounderName()),
         details: { departmentId: await this.getSalesDepartmentId(), leadName: lead.name, subject: followUp.subject },
       });
     }
@@ -350,7 +324,7 @@ class SalesAgent {
     if (!lead) throw new Error("Lead not found");
     const [updated] = await db
       .update(leadsTable)
-      .set({ lastContactedAt: now, status: lead.status === "new" ? "contacted" : lead.status, updatedAt: now })
+      .set({ lastContactedAt: now, status: stageAfterContact(lead.status), updatedAt: now })
       .where(eq(leadsTable.id, leadId))
       .returning();
     await logActivity({
@@ -358,7 +332,7 @@ class SalesAgent {
       entityId: leadId,
       action: "contact_logged",
       actorType: "user",
-      actorName: FOUNDER_NAME,
+      actorName: founderLabel(await getFounderName()),
       details: { departmentId: await this.getSalesDepartmentId(), leadName: lead.name },
     });
     this.briefCache = null;
@@ -467,7 +441,7 @@ class SalesAgent {
       }
     }
 
-    const dueDate = new Date(now.getTime() + 3 * DAY_MS);
+    const dueDate = proposalFollowUpDueDate(now);
     await db.insert(tasksTable).values({
       title: `Follow up on proposal: ${proposal.title}${lead ? ` (${lead.name})` : ""}`,
       description: `Proposal "${proposal.title}"${proposal.value ? ` worth ${money(Number(proposal.value))}` : ""} was sent on ${now.toLocaleDateString("en-US")}. If there's no reply by the due date, send the follow-up the Sales agent drafts for you.`,
@@ -509,7 +483,7 @@ class SalesAgent {
     const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, leadId)).limit(1);
     if (!lead) throw new Error("Lead not found");
 
-    let score = this.heuristicScore(lead);
+    let score = heuristicScore(lead);
     let rationale = "Heuristic score (AI unavailable).";
 
     try {
@@ -535,9 +509,11 @@ Respond with JSON only: {"score": number, "rationale": "one short sentence"}`,
         ],
         { jsonMode: true },
       );
-      const parsed = JSON.parse(result.reply) as { score?: number; rationale?: string };
-      if (typeof parsed.score === "number" && Number.isFinite(parsed.score)) {
-        score = Math.max(0, Math.min(100, Math.round(parsed.score)));
+      if (result.error) throw new Error(result.error);
+      const parsed = JSON.parse(result.reply) as { score?: unknown; rationale?: unknown };
+      const normalized = normalizeScore(parsed.score);
+      if (normalized !== null) {
+        score = normalized;
         rationale = typeof parsed.rationale === "string" ? parsed.rationale : rationale;
       }
     } catch (err) {
@@ -554,19 +530,6 @@ Respond with JSON only: {"score": number, "rationale": "one short sentence"}`,
       details: { departmentId: await this.getSalesDepartmentId(), leadName: lead.name, score, rationale },
     });
     return score;
-  }
-
-  private heuristicScore(lead: Lead): number {
-    let score = 40;
-    const value = lead.estimatedValue ? Number(lead.estimatedValue) : 0;
-    if (value >= 25_000) score += 25;
-    else if (value >= 5_000) score += 15;
-    else if (value > 0) score += 5;
-    if (lead.company) score += 10;
-    if (lead.email) score += 5;
-    if (/referr|intro|partner|inbound/i.test(lead.source ?? "")) score += 15;
-    else if (/cold|scrap|list/i.test(lead.source ?? "")) score -= 10;
-    return Math.max(0, Math.min(100, score));
   }
 
   // ───────────────────────────── brief ─────────────────────────────
@@ -625,6 +588,7 @@ Respond with JSON only:
           ],
           { jsonMode: true },
         );
+        if (result.error) throw new Error(result.error);
         const parsed = JSON.parse(result.reply) as { summary?: string; actions?: string[]; risks?: string[] };
         brief = {
           ...brief,
@@ -670,10 +634,11 @@ Respond with JSON only:
 
   /** Used by the EA Desk when the founder asks about the pipeline. */
   async answerQuestion(message: string): Promise<string> {
-    const [snapshot, stale, drafts] = await Promise.all([
+    const [snapshot, stale, drafts, founderName] = await Promise.all([
       this.getPipelineSnapshot(),
       this.listStaleDeals(),
       this.listFollowUps("draft"),
+      getFounderName(),
     ]);
     const fallback = this.deterministicBrief(snapshot, stale, drafts);
 
@@ -681,7 +646,7 @@ Respond with JSON only:
       const result = await callAI([
         {
           role: "system",
-          content: `You are ${FOUNDER_NAME}'s Sales agent. Answer the founder's question using ONLY the pipeline data provided. Be specific with names, amounts, and days. 1–4 short sentences, plain text, no lists. If drafts are ready, mention they are waiting in the Sales Desk.`,
+          content: `You are ${founderName ? `${founderName}'s` : "the founder's"} Sales agent. Answer the founder's question using ONLY the pipeline data provided. Be specific with names, amounts, and days. 1–4 short sentences, plain text, no lists. If drafts are ready, mention they are waiting in the Sales Desk.`,
         },
         {
           role: "user",
@@ -699,6 +664,7 @@ Respond with JSON only:
           })}\n\nQuestion: ${message}`,
         },
       ]);
+      if (result.error) throw new Error(result.error);
       return result.reply.trim() || fallback.summary;
     } catch (err) {
       logger.warn({ err }, "Sales question answer failed, using deterministic summary");
@@ -717,12 +683,14 @@ Respond with JSON only:
     const { lead, proposals, daysSilent, reason } = params;
     const firstName = lead.name.split(/\s+/)[0] ?? lead.name;
     const latestProposal = proposals[0];
+    const founderName = await getFounderName();
+    const signOff = founderName ? `Best,\n${founderName}` : "Best,";
 
     const fallback = {
       subject: latestProposal ? `Re: ${latestProposal.title}` : `Quick check-in${lead.company ? ` — ${lead.company}` : ""}`,
       body: latestProposal
-        ? `Hi ${firstName},\n\nI wanted to check in on the proposal I sent over (${latestProposal.title}). Happy to walk through any questions or adjust the scope if something isn't quite right.\n\nWould a quick 15-minute call this week help?\n\nBest,\n${FOUNDER_NAME}`
-        : `Hi ${firstName},\n\nIt's been a little while since we last spoke, so I wanted to check in. Is this still something you're exploring${lead.company ? ` at ${lead.company}` : ""}?\n\nIf the timing isn't right, no problem at all — just let me know and I'll follow up later.\n\nBest,\n${FOUNDER_NAME}`,
+        ? `Hi ${firstName},\n\nI wanted to check in on the proposal I sent over (${latestProposal.title}). Happy to walk through any questions or adjust the scope if something isn't quite right.\n\nWould a quick 15-minute call this week help?\n\n${signOff}`
+        : `Hi ${firstName},\n\nIt's been a little while since we last spoke, so I wanted to check in. Is this still something you're exploring${lead.company ? ` at ${lead.company}` : ""}?\n\nIf the timing isn't right, no problem at all — just let me know and I'll follow up later.\n\n${signOff}`,
     };
 
     try {
@@ -731,11 +699,11 @@ Respond with JSON only:
         [
           {
             role: "system",
-            content: `You are the Sales agent for ${FOUNDER_NAME}, a solo founder. Write a short, human follow-up email to a lead that has gone quiet. Rules:
+            content: `You are the Sales agent for ${founderName ?? "a solo founder"}. Write a short, human follow-up email to a lead that has gone quiet. Rules:
 - 60–120 words, plain text, no markdown, no placeholders like [Name].
 - Warm and direct, never pushy or salesy. One clear ask (a reply or a short call).
 - Reference the stage and context naturally. If a proposal was sent, reference it by title.
-- Sign off as ${FOUNDER_NAME}.
+- ${founderName ? `Sign off as ${founderName}.` : 'Sign off with "Best," and no name.'}
 ${profile ? `Founder context: ${profile}` : ""}
 Respond with JSON only: {"subject": "...", "body": "..."}`,
           },
@@ -764,6 +732,7 @@ Respond with JSON only: {"subject": "...", "body": "..."}`,
         ],
         { jsonMode: true },
       );
+      if (result.error) throw new Error(result.error);
       const parsed = JSON.parse(result.reply) as { subject?: string; body?: string };
       if (typeof parsed.subject === "string" && typeof parsed.body === "string" && parsed.body.trim()) {
         return { subject: parsed.subject.trim(), body: parsed.body.trim() };
