@@ -15,6 +15,8 @@ FounderOS is self-hosted, runs on your own Postgres, and works with the AI provi
 - **Pipeline brief.** Open value, value at risk, three concrete moves for today, and risks, refreshed hourly and shown on the Command Center.
 - **Executive Assistant chat.** Ask "which deals are going quiet?", "how is the pipeline?", or "draft a follow-up for Priya" and the Sales agent answers from live data. It also captures leads, tasks, and projects from plain sentences.
 
+- **Works inside ChatGPT and Claude.** A built-in MCP server lets ChatGPT, Claude, Cursor, or any MCP client read your pipeline and act on it. See [Connect ChatGPT or Claude](#connect-chatgpt-or-claude-mcp).
+
 Everything degrades gracefully. With no AI key configured the app still runs, with template follow-ups and deterministic briefs.
 
 ## What it deliberately does not do yet
@@ -68,6 +70,44 @@ All configuration is environment variables. `.env.example` documents every one. 
 | `FOUNDER_NAME` | Used in prompts and email sign-offs until a profile name is stored. |
 
 Keys are read on the server only. The browser never sees them. Settings → AI Provider shows which provider is active and has a "Test connection" button.
+
+## Connect ChatGPT or Claude (MCP)
+
+FounderOS ships an [MCP](https://modelcontextprotocol.io) server at `/mcp`, so you can work your pipeline from the assistant you already use. Ask "which deals are going quiet?", "draft a follow-up for Priya", or "mark Daniel as won", and it calls FounderOS directly.
+
+**1. Turn it on.** Generate a token, put it in `.env`, and restart. MCP stays off until the token is set.
+
+```bash
+node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+# .env
+MCP_TOKEN=<the value printed above>
+```
+
+**2. Connect a client.**
+
+| Client | How |
+| --- | --- |
+| ChatGPT | Settings → Apps & Connectors → Advanced → enable Developer mode, then create a connector. URL `https://<your-host>/mcp/<MCP_TOKEN>`, authentication "No authentication". The token in the URL is the credential. |
+| Claude Code | `claude mcp add --transport http founderos https://<your-host>/mcp --header "Authorization: Bearer <MCP_TOKEN>"` |
+| Claude Desktop, Cursor, others | Streamable HTTP at `https://<your-host>/mcp` with header `Authorization: Bearer <MCP_TOKEN>`. |
+
+ChatGPT connects from OpenAI's servers, so it needs a public HTTPS address; `localhost` will not work. Deploy FounderOS, or run a tunnel such as `cloudflared tunnel --url http://localhost:5000`, and set `APP_URL` to that address so links in tool results point at it. Claude Code runs on your machine and can use `http://localhost:5001/mcp` directly. Which ChatGPT plans allow custom connectors and write actions changes over time, so check OpenAI's current documentation.
+
+**Tools**
+
+| Tool | Does |
+| --- | --- |
+| `search`, `fetch` | Find leads and proposals by text, then read the full record. The shape ChatGPT connectors expect. |
+| `founderos_get_pipeline` | Stage totals, value at risk, drafts waiting, and the Sales agent's brief with today's moves. |
+| `founderos_list_stale_deals` | Deals past their stage's silence limit, most urgent first. |
+| `founderos_list_leads`, `founderos_get_lead` | Filter, sort, and page through leads; get one lead with proposals and follow-up history. Leads can be named instead of passing an id. |
+| `founderos_list_follow_up_drafts` | Follow-up emails waiting to be sent. |
+| `founderos_create_lead` | Add a lead. Refuses duplicates by email. |
+| `founderos_update_lead_stage`, `founderos_log_contact` | Move a deal or record outreach, with an optional dated note. |
+| `founderos_draft_follow_up`, `founderos_mark_follow_up_sent` | Have the Sales agent write an email, then record that you sent it. FounderOS never sends email itself. |
+| `founderos_scan_pipeline` | Run the stale-deal scan now. |
+
+Treat the connector URL like a password: anyone holding it can read and edit your pipeline. Rotate it by changing `MCP_TOKEN`. The token is redacted from request logs and never returned to the browser.
 
 ## Architecture
 

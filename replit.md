@@ -13,6 +13,8 @@ An AI-native operating system for founders — a dark, immersive command center 
 - `docker compose up --build` — one-command production-style run (Postgres + app in one image)
 - Required env: `DATABASE_URL`; one AI key (`ANTHROPIC_API_KEY` preferred, see `.env.example`); `APP_PASSWORD` for anything not on localhost
 - AI provider layer: `artifacts/api-server/src/lib/ai` (Anthropic SDK, OpenAI-compatible HTTP for OpenAI/OpenRouter/Groq/Ollama, legacy Puter). Auth guard: `src/lib/auth.ts` + `routes/auth.ts`, frontend `components/auth-gate.tsx`.
+- MCP server: `artifacts/api-server/src/mcp` (stateless Streamable HTTP at `/mcp`, tools in `server.ts`, `MCP_TOKEN` auth in `auth.ts`). Off until `MCP_TOKEN` is set; ChatGPT uses `/mcp/<token>`, other clients a bearer header.
+- `NET_CONNECT_ATTEMPT_MS` (default 2500) raises Node's per-address connect window; the 250 ms default breaks AI calls on slow links.
 - Public repo: https://github.com/rahulsinghnegiii/Founder-OS
 
 ## Stack

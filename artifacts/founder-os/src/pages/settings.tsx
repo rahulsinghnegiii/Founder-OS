@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle, Bot, CheckCircle, Cpu, KeyRound, LogOut, Mic, Zap } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle, Cpu, KeyRound, LogOut, Mic, Plug, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,12 @@ interface ProvidersResponse {
   providers: ServerProvider[];
   models: ModelInfo[];
   authRequired?: boolean;
+  mcp?: {
+    enabled: boolean;
+    problem: string | null;
+    publicUrl: string | null;
+    tools: { name: string; writes: boolean }[];
+  };
   note?: string;
 }
 
@@ -254,6 +260,8 @@ export default function Settings() {
         </CardHeader>
       </Card>
 
+      {data?.mcp ? <McpCard mcp={data.mcp} /> : null}
+
       {data?.authRequired ? (
         <Card className="bg-card border-border/50">
           <CardHeader>
@@ -380,5 +388,74 @@ export default function Settings() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function McpCard({ mcp }: { mcp: NonNullable<ProvidersResponse["mcp"]> }) {
+  const base = mcp.publicUrl ?? "https://your-public-host";
+  const readTools = mcp.tools.filter((t) => !t.writes);
+  const writeTools = mcp.tools.filter((t) => t.writes);
+
+  return (
+    <Card className="bg-card border-border/50">
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
+              mcp.enabled ? "border-emerald-400 bg-emerald-100" : "border-slate-300 bg-secondary",
+            )}
+          >
+            <Plug className={cn("h-5 w-5", mcp.enabled ? "text-emerald-600" : "text-slate-600")} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle>Connect ChatGPT or Claude (MCP)</CardTitle>
+            <CardDescription className="mt-1">
+              {mcp.enabled ? (
+                <span className="flex items-center gap-1.5 text-emerald-700">
+                  <CheckCircle className="h-4 w-4" /> MCP endpoint is on · {mcp.tools.length} tools
+                </span>
+              ) : (
+                <span className="text-slate-600">{mcp.problem}</span>
+              )}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div className="rounded-2xl border border-border/60 bg-white/60 px-4 py-3">
+          <p className="font-medium text-slate-900">ChatGPT</p>
+          <p className="mt-1 text-slate-600">
+            Settings → Apps &amp; Connectors → Advanced → Developer mode, then create a connector with this URL and
+            authentication set to <em>No authentication</em>. The token in the URL is the credential.
+          </p>
+          <code className="mt-2 block break-all rounded-xl bg-slate-900 px-3 py-2 text-xs text-slate-100">
+            {base}/mcp/&lt;MCP_TOKEN&gt;
+          </code>
+        </div>
+        <div className="rounded-2xl border border-border/60 bg-white/60 px-4 py-3">
+          <p className="font-medium text-slate-900">Claude Code, Claude Desktop, Cursor</p>
+          <code className="mt-2 block break-all rounded-xl bg-slate-900 px-3 py-2 text-xs text-slate-100">
+            claude mcp add --transport http founderos {base}/mcp --header "Authorization: Bearer &lt;MCP_TOKEN&gt;"
+          </code>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          ChatGPT needs a public HTTPS address. Deploy FounderOS or run a tunnel such as{" "}
+          <code>cloudflared tunnel --url http://localhost:5000</code>, and set <code>APP_URL</code> to that address.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {readTools.map((t) => (
+            <Badge key={t.name} variant="secondary" className="border-slate-200 bg-white text-[10px] font-normal text-slate-700">
+              {t.name}
+            </Badge>
+          ))}
+          {writeTools.map((t) => (
+            <Badge key={t.name} variant="secondary" className="border-amber-300 bg-amber-50 text-[10px] font-normal text-amber-800">
+              {t.name} · writes
+            </Badge>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -68,6 +68,11 @@ export default defineConfig({
         target: "http://localhost:5001",
         changeOrigin: true,
       },
+      // MCP endpoint, so a tunnel to the dev frontend port also reaches it.
+      "/mcp": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+      },
     },
     fs: {
       strict: true,

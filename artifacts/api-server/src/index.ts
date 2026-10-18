@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 
 function loadEnv() {
   const dir = import.meta.dirname ?? process.cwd();
@@ -30,6 +31,13 @@ function loadEnv() {
 }
 
 loadEnv();
+
+// Node abandons each address of a host after 250 ms by default ("happy
+// eyeballs"). On slow or high-latency links every attempt dies before the TCP
+// handshake finishes and AI calls fail with UND_ERR_CONNECT_TIMEOUT even
+// though curl works. Give each address a realistic window.
+const connectAttemptMs = Number(process.env.NET_CONNECT_ATTEMPT_MS) || 2500;
+setDefaultAutoSelectFamilyAttemptTimeout(connectAttemptMs);
 
 const { default: app } = await import("./app");
 const { logger } = await import("./lib/logger");

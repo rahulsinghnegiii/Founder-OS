@@ -53,6 +53,10 @@ services:
       PUTER_AUTH_TOKEN: ${PUTER_AUTH_TOKEN:-}
       AI_EFFORT: ${AI_EFFORT:-}
       FOUNDER_NAME: ${FOUNDER_NAME:-}
+      # MCP endpoint for ChatGPT / Claude. Off until MCP_TOKEN is set.
+      MCP_TOKEN: ${MCP_TOKEN:-}
+      APP_URL: ${APP_URL:-}
+      NET_CONNECT_ATTEMPT_MS: ${NET_CONNECT_ATTEMPT_MS:-2500}
       # Set to 1 to load a sample pipeline on first start (skipped if leads exist).
       SEED_DEMO: ${SEED_DEMO:-0}
 

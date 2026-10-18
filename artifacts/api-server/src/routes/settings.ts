@@ -3,6 +3,8 @@ import { providerFactory } from "../lib/ai/providers";
 import { MODEL_REGISTRY } from "../lib/ai/models";
 import { callAI } from "../lib/ai";
 import { authRequired } from "../lib/auth";
+import { mcpConfigProblem } from "../mcp/auth";
+import { MCP_TOOL_NAMES, MCP_WRITE_TOOLS } from "../mcp/server";
 
 const router: IRouter = Router();
 
@@ -26,6 +28,13 @@ router.get("/settings/providers", (_req, res) => {
     providers,
     models,
     authRequired: authRequired(),
+    // Status only. The token itself is never returned to the browser.
+    mcp: {
+      enabled: mcpConfigProblem() === null,
+      problem: mcpConfigProblem(),
+      publicUrl: process.env.APP_URL?.trim().replace(/\/$/, "") || null,
+      tools: MCP_TOOL_NAMES.map((name) => ({ name, writes: MCP_WRITE_TOOLS.has(name) })),
+    },
     note:
       active.name === "none"
         ? "No AI provider configured. Add one key to .env (ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, OLLAMA_BASE_URL) and restart."
