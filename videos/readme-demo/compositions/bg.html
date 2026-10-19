@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template id="bg-template">
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          background-color: #f7f3ea;
+          background-image: radial-gradient(rgba(20, 22, 31, 0.11) 1.6px, transparent 1.6px);
+          background-size: 24px 24px;
+        }
+        #bg-blob-a,
+        #bg-blob-b {
+          position: absolute;
+          border-radius: 50%;
+          border: 3px solid rgba(20, 22, 31, 0.12);
+        }
+        #bg-blob-a {
+          width: 460px;
+          height: 460px;
+          left: -150px;
+          top: 360px;
+          background: #f9d5da;
+        }
+        #bg-blob-b {
+          width: 380px;
+          height: 380px;
+          left: 1010px;
+          top: -170px;
+          background: #fde9b3;
+        }
+      </style>
+
+      <div id="root" data-composition-id="bg" data-width="1280" data-height="720">
+        <div id="bg-blob-a" data-layout-allow-overflow></div>
+        <div id="bg-blob-b" data-layout-allow-overflow></div>
+      </div>
+
+      <script>
+        (function () {
+          // Ambient drift: one full sine cycle across the 25s loop, so the last frame equals the first.
+          const LOOP = 25;
+          const a = document.getElementById("bg-blob-a");
+          const b = document.getElementById("bg-blob-b");
+          const render = (t) => {
+            const p = (Math.PI * 2 * t) / LOOP;
+            a.style.transform = `translate(${Math.sin(p) * 46}px, ${Math.cos(p) * 30 - 30}px)`;
+            b.style.transform = `translate(${Math.cos(p) * 38 - 38}px, ${Math.sin(p) * 34}px)`;
+          };
+          const tl = gsap.timeline({ paused: true });
+          const drive = { t: 0 };
+          tl.to(drive, { t: LOOP, duration: LOOP, ease: "none", onUpdate: () => render(drive.t) }, 0);
+          render(0);
+          window.__timelines["bg"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

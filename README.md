@@ -21,7 +21,7 @@ It is a self-hosted, open-source alternative to a full CRM like HubSpot or Piped
 
 [Quick start](#quick-start) · [Features](#features) · [Use it from ChatGPT or Claude](#connect-chatgpt-or-claude-mcp) · [FAQ](#faq) · [Roadmap](#roadmap)
 
-![FounderOS Sales Desk showing open pipeline value, deals going quiet, and today's suggested sales moves](docs/screenshots/sales-desk.png)
+![FounderOS demo: the Sales Desk flags three deals that went quiet, the Sales agent drafts a follow-up email for Daniel, marking it sent resets his silence clock, and an AI assistant connected over MCP answers which deals are still going quiet](docs/demo.gif)
 
 ## Features
 
@@ -189,6 +189,8 @@ pnpm monorepo, TypeScript end to end.
 In production one process serves both the API and the built frontend. That is what the Docker image does.
 
 ## Development
+
+The README demo is a [HyperFrames](https://hyperframes.heygen.com) composition in `videos/readme-demo`. After a UI change, re-render it from that folder with `npx hyperframes render --format gif --fps 15 -o ../../docs/demo.gif`.
 
 ```bash
 pnpm run typecheck     # all packages

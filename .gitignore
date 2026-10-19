@@ -61,3 +61,8 @@ UI/
 
 # Local env variants
 .env.*.local
+
+# HyperFrames video projects: keep the source, ignore renders and check artifacts
+videos/**/renders/
+videos/**/.hyperframes/
+videos/**/*.log

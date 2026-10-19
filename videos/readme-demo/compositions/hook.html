@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template id="hook-template">
+      <style>
+        @font-face {
+          font-family: "Manrope";
+          src: url("../assets/fonts/manrope.woff2") format("woff2"), url("assets/fonts/manrope.woff2") format("woff2");
+          font-weight: 200 800;
+          font-display: block;
+        }
+        @font-face {
+          font-family: "Space Grotesk";
+          src: url("../assets/fonts/space-grotesk.woff2") format("woff2"), url("assets/fonts/space-grotesk.woff2") format("woff2");
+          font-weight: 300 700;
+          font-display: block;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: "Manrope", sans-serif;
+          color: #14161f;
+        }
+        #hook-inner {
+          position: absolute;
+          left: 96px;
+          top: 188px;
+          width: 1088px;
+        }
+        #hook-brand-row {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        #hook-logo {
+          width: 52px;
+          height: 52px;
+          border-radius: 15px;
+          border: 3px solid #14161f;
+          background: #f6a3ad;
+          box-shadow: 4px 4px 0 #14161f;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 26px;
+        }
+        #hook-brand {
+          font-family: "Space Grotesk", sans-serif;
+          font-size: 30px;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+        }
+        .hook-line {
+          margin-top: 30px;
+          font-weight: 800;
+          letter-spacing: -0.035em;
+          line-height: 1.1;
+        }
+        #hook-l1 {
+          font-size: 46px;
+          color: #4f5462;
+        }
+        #hook-l2 {
+          margin-top: 14px;
+          font-size: 70px;
+        }
+        .hook-w {
+          display: inline-block;
+          opacity: 0;
+          margin-right: 0.24em;
+        }
+        .hook-marked {
+          position: relative;
+          isolation: isolate;
+        }
+        #hook-mark-bar {
+          position: absolute;
+          left: -6px;
+          right: -6px;
+          top: 18%;
+          bottom: 4%;
+          border-radius: 10px;
+          background: #ffd76a;
+          z-index: -1;
+          transform-origin: 0% 50%;
+        }
+      </style>
+
+      <div id="root" data-composition-id="hook" data-width="1280" data-height="720">
+        <div id="hook-inner" data-layout-allow-overlap>
+          <div id="hook-brand-row">
+            <div id="hook-logo">F</div>
+            <div id="hook-brand">FounderOS</div>
+          </div>
+          <div id="hook-l1" class="hook-line">
+            <span class="hook-w">Founders</span><span class="hook-w">don't</span><span class="hook-w">lose</span><span class="hook-w">deals</span><span class="hook-w">to</span><span class="hook-w">competitors.</span>
+          </div>
+          <div id="hook-l2" class="hook-line">
+            <span class="hook-w">They</span><span class="hook-w">lose</span><span class="hook-w">them</span><span class="hook-w">to</span><span class="hook-w hook-marked"><span id="hook-mark-bar"></span>silence.</span>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+          // waterfall-entry: binary reveal, whip up from below, each word overlapping the last
+          const F = 1 / 30;
+          let at = 0.2;
+          const cascade = (selector, normalY, heavyY, normalDur, heavyDur) => {
+            const words = document.querySelectorAll(selector);
+            words.forEach((el, i) => {
+              const heavy = i === words.length - 1;
+              const dur = heavy ? heavyDur : normalDur;
+              tl.set(el, { opacity: 1, y: heavy ? heavyY : normalY }, at);
+              tl.to(el, { y: 0, duration: dur, ease: "power4.out" }, at);
+              at += dur - F;
+            });
+          };
+          cascade("#hook-l1 .hook-w", 44, 70, 0.15, 0.2);
+          at += 0.22;
+          cascade("#hook-l2 .hook-w", 50, 80, 0.16, 0.22);
+          tl.fromTo("#hook-mark-bar", { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power3.out" }, at + 0.12);
+          tl.fromTo(
+            "#hook-inner",
+            { opacity: 1, y: 0 },
+            { opacity: 0, y: -26, duration: 0.32, ease: "power2.in", immediateRender: false },
+            3.0,
+          );
+          window.__timelines["hook"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

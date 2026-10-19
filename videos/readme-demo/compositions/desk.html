@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template id="desk-template">
+      <style>
+        @font-face {
+          font-family: "Manrope";
+          src: url("../assets/fonts/manrope.woff2") format("woff2"), url("assets/fonts/manrope.woff2") format("woff2");
+          font-weight: 200 800;
+          font-display: block;
+        }
+        @font-face {
+          font-family: "Space Grotesk";
+          src: url("../assets/fonts/space-grotesk.woff2") format("woff2"), url("assets/fonts/space-grotesk.woff2") format("woff2");
+          font-weight: 300 700;
+          font-display: block;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: "Manrope", sans-serif;
+          color: #14161f;
+        }
+        #desk-inner {
+          position: absolute;
+          inset: 0;
+        }
+        .d-mono {
+          font-family: "IBM Plex Mono", monospace;
+        }
+
+        /* captions */
+        .d-cap {
+          position: absolute;
+          left: 52px;
+          top: 30px;
+          height: 52px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          opacity: 0;
+        }
+        .d-step {
+          width: 46px;
+          height: 46px;
+          border-radius: 50%;
+          background: #14161f;
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: "Space Grotesk", sans-serif;
+          font-weight: 700;
+          font-size: 23px;
+          flex: none;
+        }
+        .d-cap-text {
+          font-size: 31px;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+          white-space: nowrap;
+        }
+        .d-cap-text em {
+          font-style: normal;
+          background: #ffd76a;
+          border-radius: 8px;
+          padding: 0 6px;
+        }
+
+        /* app window */
+        #desk-window {
+          position: absolute;
+          left: 48px;
+          top: 100px;
+          width: 1184px;
+          height: 600px;
+          border: 3px solid #14161f;
+          border-radius: 28px;
+          background: #fffdf8;
+          box-shadow: 10px 10px 0 #14161f;
+          overflow: hidden;
+        }
+        #desk-titlebar {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 50px;
+          background: #efe8da;
+          border-bottom: 3px solid #14161f;
+        }
+        .d-dot {
+          position: absolute;
+          top: 16px;
+          width: 15px;
+          height: 15px;
+          border-radius: 50%;
+          border: 2px solid #14161f;
+        }
+        #desk-titlebar-label {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 13px;
+          text-align: center;
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .d-metric {
+          position: absolute;
+          top: 64px;
+          height: 80px;
+          border: 3px solid #14161f;
+          border-radius: 18px;
+          background: #ffffff;
+        }
+        .d-metric-k {
+          position: absolute;
+          left: 18px;
+          top: 10px;
+          font-size: 14px;
+          font-weight: 500;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+        .d-metric-v {
+          position: absolute;
+          left: 18px;
+          top: 30px;
+          font-family: "Space Grotesk", sans-serif;
+          font-weight: 700;
+          font-size: 34px;
+          letter-spacing: -0.03em;
+        }
+
+        .d-panel {
+          position: absolute;
+          top: 158px;
+          height: 418px;
+          border: 3px solid #14161f;
+          border-radius: 24px;
+          background: #ffffff;
+          overflow: hidden;
+        }
+
+        /* deals list */
+        #desk-deals {
+          left: 24px;
+          width: 600px;
+        }
+        #desk-deals-head {
+          position: absolute;
+          left: 22px;
+          top: 16px;
+          font-size: 26px;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+        }
+        #desk-pill {
+          position: absolute;
+          right: 20px;
+          top: 18px;
+          min-width: 44px;
+          height: 34px;
+          border: 2.5px solid #14161f;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 19px;
+          background: #ffe2e5;
+        }
+        .d-row {
+          position: absolute;
+          left: 16px;
+          width: 562px;
+          height: 100px;
+          border: 2px solid #14161f;
+          border-radius: 18px;
+          opacity: 0;
+        }
+        .d-critical {
+          background: #ffe2e5;
+        }
+        .d-risk {
+          background: #fff1c9;
+        }
+        .d-name {
+          position: absolute;
+          left: 18px;
+          top: 12px;
+          font-size: 24px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+        .d-meta {
+          position: absolute;
+          left: 18px;
+          top: 52px;
+          font-size: 17px;
+          font-weight: 600;
+          color: #4f5462;
+        }
+        .d-badge {
+          position: absolute;
+          right: 16px;
+          top: 12px;
+          height: 30px;
+          padding: 0 12px;
+          border: 2px solid #14161f;
+          border-radius: 999px;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          font-size: 15px;
+          font-weight: 500;
+          white-space: nowrap;
+          transform-origin: 100% 50%;
+        }
+        #desk-badge-ok {
+          background: #dff5e6;
+          opacity: 0;
+        }
+        .d-btn {
+          position: absolute;
+          height: 42px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 17px;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+        }
+        .d-row-btn {
+          right: 16px;
+          bottom: 12px;
+          width: 190px;
+          background: #14161f;
+          color: #ffffff;
+        }
+
+        /* today's moves (under the draft) */
+        #desk-moves {
+          left: 648px;
+          width: 506px;
+          background: #14161f;
+          color: #f3f1ea;
+        }
+        #desk-moves-head {
+          position: absolute;
+          left: 24px;
+          top: 20px;
+          font-size: 24px;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+        }
+        #desk-moves-head b {
+          color: #ffd76a;
+        }
+        .d-move {
+          position: absolute;
+          left: 22px;
+          width: 456px;
+          height: 96px;
+          border: 2px solid #3a3e4c;
+          border-radius: 16px;
+          background: #1e212c;
+        }
+        .d-move-n {
+          position: absolute;
+          left: 16px;
+          top: 16px;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: #ffd76a;
+          color: #14161f;
+          font-weight: 800;
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .d-move-t {
+          position: absolute;
+          left: 60px;
+          top: 14px;
+          width: 380px;
+          font-size: 18px;
+          font-weight: 600;
+          line-height: 1.4;
+        }
+
+        /* follow-up draft */
+        #desk-draft {
+          left: 648px;
+          width: 506px;
+        }
+        #desk-draft-label {
+          position: absolute;
+          left: 22px;
+          top: 16px;
+          font-size: 14px;
+          font-weight: 500;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+        #desk-draft-who {
+          position: absolute;
+          left: 22px;
+          top: 40px;
+          font-size: 23px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+        #desk-draft-reason {
+          position: absolute;
+          left: 22px;
+          top: 80px;
+          height: 30px;
+          padding: 0 12px;
+          border: 2px solid #14161f;
+          border-radius: 999px;
+          background: #fff1c9;
+          display: flex;
+          align-items: center;
+          font-size: 15px;
+          font-weight: 700;
+        }
+        #desk-draft-subject {
+          position: absolute;
+          left: 22px;
+          top: 124px;
+          font-size: 19px;
+          font-weight: 800;
+        }
+        #desk-draft-status {
+          position: absolute;
+          left: 22px;
+          top: 162px;
+          font-size: 18px;
+          font-weight: 700;
+          color: #4f5462;
+        }
+        #desk-draft-body {
+          position: absolute;
+          left: 22px;
+          top: 158px;
+          width: 458px;
+          height: 186px;
+          font-size: 18px;
+          font-weight: 600;
+          line-height: 1.42;
+          color: #262a35;
+          white-space: pre-wrap;
+        }
+        .d-caret {
+          display: inline-block;
+          width: 10px;
+          height: 22px;
+          margin-left: 2px;
+          vertical-align: -4px;
+          background: #14161f;
+          border-radius: 2px;
+        }
+        #desk-btn-copy {
+          left: 22px;
+          top: 352px;
+          width: 110px;
+          border: 2.5px solid #14161f;
+          background: #ffffff;
+        }
+        #desk-btn-sent,
+        #desk-btn-done {
+          left: 308px;
+          top: 352px;
+          width: 170px;
+          color: #ffffff;
+          background: #157a3c;
+          border: 2.5px solid #14161f;
+        }
+        #desk-btn-done {
+          opacity: 0;
+          background: #0e5a2b;
+        }
+
+        /* toast */
+        #desk-toast {
+          position: absolute;
+          left: 48px;
+          top: 462px;
+          width: 548px;
+          height: 64px;
+          border: 2.5px solid #14161f;
+          border-radius: 18px;
+          background: #dff5e6;
+          box-shadow: 5px 5px 0 #14161f;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 0 18px;
+          transform-origin: 50% 100%;
+        }
+        #desk-toast-check {
+          width: 34px;
+          height: 34px;
+          flex: none;
+          border-radius: 50%;
+          background: #157a3c;
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 19px;
+        }
+        #desk-toast-msg {
+          font-size: 19px;
+          font-weight: 800;
+          letter-spacing: -0.015em;
+        }
+        #desk-toast-sub {
+          font-size: 14px;
+          font-weight: 500;
+          color: #3d4250;
+          margin-top: 2px;
+        }
+
+        /* AI assistant over MCP */
+        #desk-chat {
+          left: 648px;
+          width: 506px;
+          background: #fbf9f4;
+        }
+        #desk-chat-bar {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 60px;
+          border-bottom: 2.5px solid #14161f;
+          background: #ffffff;
+        }
+        #desk-chat-ico {
+          position: absolute;
+          left: 18px;
+          top: 13px;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          border: 2px solid #14161f;
+          background: #ffd76a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 16px;
+        }
+        #desk-chat-name {
+          position: absolute;
+          left: 64px;
+          top: 15px;
+          font-size: 21px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+        #desk-chat-via {
+          position: absolute;
+          right: 16px;
+          top: 15px;
+          height: 30px;
+          padding: 0 12px;
+          border: 2px solid #14161f;
+          border-radius: 999px;
+          background: #dff5e6;
+          display: flex;
+          align-items: center;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        #desk-bubble {
+          position: absolute;
+          right: 18px;
+          top: 80px;
+          padding: 11px 16px;
+          border-radius: 18px 18px 6px 18px;
+          background: #14161f;
+          color: #ffffff;
+          font-size: 19px;
+          font-weight: 700;
+          transform-origin: 100% 100%;
+        }
+        #desk-tool {
+          position: absolute;
+          left: 18px;
+          top: 142px;
+          height: 34px;
+          padding: 0 12px;
+          border: 2px solid #14161f;
+          border-radius: 999px;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 15px;
+          font-weight: 500;
+          transform-origin: 0% 50%;
+        }
+        #desk-tool-status {
+          color: #157a3c;
+        }
+        #desk-answer {
+          position: absolute;
+          left: 18px;
+          top: 190px;
+          width: 466px;
+          height: 140px;
+          font-size: 19px;
+          font-weight: 600;
+          line-height: 1.42;
+          color: #262a35;
+        }
+        #desk-input {
+          position: absolute;
+          left: 18px;
+          top: 350px;
+          width: 464px;
+          height: 48px;
+          border: 2px solid #14161f;
+          border-radius: 14px;
+          background: #ffffff;
+        }
+        #desk-prompt,
+        #desk-placeholder {
+          position: absolute;
+          left: 14px;
+          top: 10px;
+          font-size: 18px;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+        #desk-placeholder {
+          color: #5f6472;
+        }
+        #desk-send {
+          position: absolute;
+          left: 417px;
+          top: 3px;
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+          background: #14161f;
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 20px;
+        }
+
+        /* cursor + ripples */
+        #desk-cursor {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 34px;
+          height: 40px;
+          z-index: 50;
+          pointer-events: none;
+          transform-origin: 3px 3px;
+        }
+        .d-ripple {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          border: 3px solid #14161f;
+          opacity: 0;
+          z-index: 49;
+          pointer-events: none;
+        }
+      </style>
+
+      <div id="root" data-composition-id="desk" data-width="1280" data-height="720">
+        <div id="desk-inner" data-layout-allow-overlap>
+          <div id="desk-cap1" class="d-cap"><div class="d-step">1</div><div class="d-cap-text">It flags every deal that has <em>gone quiet</em>.</div></div>
+          <div id="desk-cap2" class="d-cap"><div class="d-step">2</div><div class="d-cap-text">It <em>drafts the follow-up</em> from the deal's notes.</div></div>
+          <div id="desk-cap3" class="d-cap"><div class="d-step">3</div><div class="d-cap-text">You send it. The <em>silence clock resets</em>.</div></div>
+          <div id="desk-cap4" class="d-cap"><div class="d-step">4</div><div class="d-cap-text">Ask ChatGPT or Claude about your pipeline, <em>via MCP</em>.</div></div>
+
+          <div id="desk-window">
+            <div id="desk-titlebar">
+              <div class="d-dot" style="left: 20px; background: #f6a3ad"></div>
+              <div class="d-dot" style="left: 44px; background: #ffd76a"></div>
+              <div class="d-dot" style="left: 68px; background: #dff5e6"></div>
+              <div id="desk-titlebar-label" class="d-mono">FounderOS · Sales Desk</div>
+            </div>
+
+            <div class="d-metric" style="left: 24px; width: 360px">
+              <div class="d-metric-k d-mono">Open pipeline</div>
+              <div class="d-metric-v">$88.5k</div>
+            </div>
+            <div class="d-metric" style="left: 412px; width: 360px; background: #fff1c9">
+              <div class="d-metric-k d-mono">At risk</div>
+              <div id="desk-risk" class="d-metric-v">$65.0k</div>
+            </div>
+            <div class="d-metric" style="left: 800px; width: 354px; background: #ffe2e5">
+              <div class="d-metric-k d-mono">Deals going quiet</div>
+              <div id="desk-quiet" class="d-metric-v">3</div>
+            </div>
+
+            <div id="desk-deals" class="d-panel">
+              <div id="desk-deals-head">Deals going quiet</div>
+              <div id="desk-pill">3</div>
+              <div id="desk-row-daniel" class="d-row d-critical" style="top: 66px" data-layout-allow-overflow>
+                <div class="d-name">Daniel Reyes</div>
+                <div class="d-meta">Proposal sent · $32,000</div>
+                <div id="desk-badge-daniel" class="d-badge d-mono d-pulse">9d silent · limit 4d</div>
+                <div id="desk-badge-ok" class="d-badge d-mono">touched today</div>
+                <div id="desk-btn-draft" class="d-btn d-row-btn">Draft follow-up</div>
+              </div>
+              <div id="desk-row-omar" class="d-row d-critical" style="top: 178px">
+                <div class="d-name">Omar Haddad</div>
+                <div class="d-meta">Contacted · $15,000</div>
+                <div class="d-badge d-mono d-pulse">15d silent · limit 5d</div>
+                <div class="d-btn d-row-btn">Draft follow-up</div>
+              </div>
+              <div id="desk-row-priya" class="d-row d-risk" style="top: 290px">
+                <div class="d-name">Priya Sharma</div>
+                <div class="d-meta">Qualified · $18,000</div>
+                <div class="d-badge d-mono d-pulse">12d silent · limit 7d</div>
+                <div class="d-btn d-row-btn">Draft follow-up</div>
+              </div>
+            </div>
+
+            <div id="desk-moves" class="d-panel">
+              <div id="desk-moves-head">Today's <b>sales moves</b></div>
+              <div class="d-move" style="top: 72px"><div class="d-move-n">1</div><div class="d-move-t">Follow up with Daniel Reyes. Proposal unanswered for 9 days.</div></div>
+              <div class="d-move" style="top: 182px"><div class="d-move-n">2</div><div class="d-move-t">Nudge Omar Haddad. 15 days silent since the discovery call.</div></div>
+              <div class="d-move" style="top: 292px"><div class="d-move-n">3</div><div class="d-move-t">Check in with Priya Sharma about her Q4 pilot.</div></div>
+            </div>
+
+            <div id="desk-draft" class="d-panel" data-layout-allow-overflow data-layout-allow-overlap>
+              <div id="desk-draft-label" class="d-mono">Follow-up draft · Sales agent</div>
+              <div id="desk-draft-who">Daniel Reyes · Harbor Freight</div>
+              <div id="desk-draft-reason">Proposal sent 9 days ago, no reply</div>
+              <div id="desk-draft-subject">Subject: Re: Warehouse automation pilot</div>
+              <div id="desk-draft-status">Writing from the deal's notes</div>
+              <div id="desk-draft-body"><span id="desk-draft-text"></span><span id="desk-draft-caret" class="d-caret"></span></div>
+              <div id="desk-btn-copy" class="d-btn">Copy</div>
+              <div id="desk-btn-sent" class="d-btn">Mark sent</div>
+              <div id="desk-btn-done" class="d-btn">Sent ✓</div>
+            </div>
+
+            <div id="desk-chat" class="d-panel" data-layout-allow-overflow data-layout-allow-overlap>
+              <div id="desk-chat-bar">
+                <div id="desk-chat-ico">AI</div>
+                <div id="desk-chat-name">Your AI assistant</div>
+                <div id="desk-chat-via" class="d-mono">via MCP</div>
+              </div>
+              <div id="desk-bubble">Which deals are going quiet?</div>
+              <div id="desk-tool" class="d-mono">founderos_list_stale_deals <span id="desk-tool-status">running…</span></div>
+              <div id="desk-answer"><span id="desk-answer-text"></span><span id="desk-answer-caret" class="d-caret"></span></div>
+              <div id="desk-input">
+                <div id="desk-placeholder">Ask about your pipeline…</div>
+                <div id="desk-prompt"><span id="desk-prompt-text"></span><span id="desk-prompt-caret" class="d-caret"></span></div>
+                <div id="desk-send">↑</div>
+              </div>
+            </div>
+
+            <div id="desk-toast">
+              <div id="desk-toast-check">✓</div>
+              <div>
+                <div id="desk-toast-msg">Silence clock reset for Daniel Reyes</div>
+                <div id="desk-toast-sub" class="d-mono">last contact: today · next nudge in 4 days</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="desk-ripple-1" class="d-ripple"></div>
+          <div id="desk-ripple-2" class="d-ripple"></div>
+          <div id="desk-ripple-3" class="d-ripple"></div>
+          <svg id="desk-cursor" viewBox="0 0 34 40" aria-hidden="true">
+            <path d="M3 3 L3 33 L11.5 25.5 L17 37.5 L22.5 35 L17 23.5 L28.5 23.5 Z" fill="#14161f" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+          </svg>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          // ───── layout constants (canvas px), derived from the CSS above; never measured at render time ─────
+          const WIN = { x: 48 + 3, y: 100 + 3 }; // window padding-box origin
+          const DEALS = { x: WIN.x + 24 + 3, y: WIN.y + 158 + 3 }; // deals panel padding-box origin
+          const RIGHT = { x: WIN.x + 648 + 3, y: WIN.y + 158 + 3 }; // right-slot panel padding-box origin
+          const DRAFT_BTN = { x: DEALS.x + 16 + 2 + (558 - 16 - 95), y: DEALS.y + 66 + 2 + (96 - 12 - 21) };
+          const SENT_BTN = { x: RIGHT.x + 308 + 85, y: RIGHT.y + 352 + 21 };
+          const SEND_BTN = { x: RIGHT.x + 18 + 2 + 417 + 19, y: RIGHT.y + 350 + 2 + 3 + 19 };
+          const CURSOR_TIP = 3; // the arrow tip sits 3px inside the svg box
+
+          const DRAFT =
+            "Hi Daniel,\nChecking in on the warehouse automation pilot proposal. Happy to adjust the scope for your two sites.\nWould a 15-minute call this week help?\nBest, Rahul";
+          const PROMPT = "Which deals are going quiet?";
+          const ANSWER =
+            "Two deals need a nudge: Omar Haddad, 15 days silent, and Priya Sharma, 12 days. Want me to draft both follow-ups?";
+
+          // scene-local times (slot starts at 2.9s on the root timeline)
+          const T = {
+            draftStatus: 3.35,
+            draftStart: 4.05,
+            draftEnd: 7.05,
+            riskFrom: 9.4,
+            riskTo: 10.0,
+            quietSwap: 9.7,
+            promptStart: 11.8,
+            promptEnd: 12.85,
+            submit: 13.1,
+            toolDone: 13.9,
+            answerStart: 14.05,
+            answerEnd: 16.25,
+            total: 19.1,
+          };
+
+          const $ = (id) => document.getElementById(id);
+          const els = {
+            draftText: $("desk-draft-text"),
+            draftCaret: $("desk-draft-caret"),
+            draftStatus: $("desk-draft-status"),
+            promptText: $("desk-prompt-text"),
+            promptCaret: $("desk-prompt-caret"),
+            placeholder: $("desk-placeholder"),
+            answerText: $("desk-answer-text"),
+            answerCaret: $("desk-answer-caret"),
+            toolStatus: $("desk-tool-status"),
+            risk: $("desk-risk"),
+            quiet: $("desk-quiet"),
+            pill: $("desk-pill"),
+          };
+
+          const clamp01 = (v) => Math.max(0, Math.min(1, v));
+          const slice = (text, t, a, b) => text.slice(0, Math.round(text.length * clamp01((t - a) / (b - a))));
+          const blinkOn = (t) => t % 0.9 < 0.5;
+
+          // discrete-text-sequence driver: every streamed text and counter is a pure function of t
+          function renderAt(t) {
+            const dots = ".".repeat(1 + (Math.floor(Math.max(0, t - T.draftStatus) / 0.18) % 3));
+            els.draftStatus.textContent = `Writing from the deal's notes${dots}`;
+            els.draftStatus.style.opacity = t >= T.draftStatus && t < T.draftStart ? "1" : "0";
+            els.draftText.textContent = slice(DRAFT, t, T.draftStart, T.draftEnd);
+            els.draftCaret.style.opacity = t >= T.draftStart && t < T.draftEnd + 0.6 && blinkOn(t) ? "1" : "0";
+
+            let risk = 65000;
+            if (t >= T.riskTo) risk = 33000;
+            else if (t > T.riskFrom) {
+              const p = (t - T.riskFrom) / (T.riskTo - T.riskFrom);
+              risk = 65000 - 32000 * (1 - Math.pow(1 - p, 3));
+            }
+            els.risk.textContent = `$${(risk / 1000).toFixed(1)}k`;
+            const quiet = t >= T.quietSwap ? "2" : "3";
+            els.quiet.textContent = quiet;
+            els.pill.textContent = quiet;
+
+            const typing = t >= T.promptStart && t < T.submit;
+            els.promptText.textContent = typing ? slice(PROMPT, t, T.promptStart, T.promptEnd) : "";
+            els.promptCaret.style.opacity = typing && blinkOn(t) ? "1" : "0";
+            els.placeholder.style.opacity = typing ? "0" : "1";
+            els.toolStatus.textContent = t >= T.toolDone ? "✓ done" : "running…";
+            els.answerText.textContent = slice(ANSWER, t, T.answerStart, T.answerEnd);
+            els.answerCaret.style.opacity = t >= T.answerStart && t < T.answerEnd + 0.6 && blinkOn(t) ? "1" : "0";
+          }
+
+          const tl = gsap.timeline({ paused: true });
+          const drive = { t: 0 };
+          tl.to(drive, { t: T.total, duration: T.total, ease: "none", onUpdate: () => renderAt(drive.t) }, 0);
+          renderAt(0);
+
+          // ───── the Sales Desk arrives (cursor-ui-demo, static-stage tour) ─────
+          tl.fromTo("#desk-window", { scale: 0.9, opacity: 0, y: 30 }, { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.2);
+          ["#desk-row-daniel", "#desk-row-omar", "#desk-row-priya"].forEach((sel, i) => {
+            const t0 = 0.55 + i * 0.13;
+            tl.set(sel, { opacity: 1, y: 56 }, t0);
+            tl.to(sel, { y: 0, duration: 0.2, ease: "power4.out" }, t0);
+          });
+          tl.fromTo(".d-pulse", { scale: 1 }, { scale: 1.12, duration: 0.18, ease: "power2.out", yoyo: true, repeat: 1, stagger: 0.14 }, 1.15);
+
+          const caption = (sel, tin, tout) => {
+            tl.fromTo(sel, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, tin);
+            tl.to(sel, { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" }, tout);
+          };
+          caption("#desk-cap1", 0.75, 2.95);
+          caption("#desk-cap2", 3.2, 8.25);
+          caption("#desk-cap3", 8.5, 11.05);
+          caption("#desk-cap4", 11.3, 18.6);
+
+          // cursor-click-ripple: move, depress cursor + target together, ring burst from the click point
+          const click = (target, moveAt, moveDur, clickAt, button) => {
+            tl.to("#desk-cursor", { x: target.x - CURSOR_TIP, y: target.y - CURSOR_TIP, duration: moveDur, ease: "power3.out" }, moveAt);
+            tl.to("#desk-cursor", { scale: 0.84, duration: 0.08, ease: "power2.in", yoyo: true, repeat: 1 }, clickAt);
+            tl.to(button, { scale: 0.94, duration: 0.08, ease: "power2.in", yoyo: true, repeat: 1 }, clickAt);
+            ["#desk-ripple-1", "#desk-ripple-2", "#desk-ripple-3"].forEach((r, i) => {
+              tl.fromTo(
+                r,
+                { x: target.x - 30, y: target.y - 30, scale: 0.2, opacity: 0.9 },
+                { scale: 3.2, opacity: 0, duration: 0.6, ease: "power2.out", immediateRender: false },
+                clickAt + 0.02 + i * 0.08,
+              );
+            });
+          };
+          tl.fromTo("#desk-cursor", { x: 1300, y: 760, scale: 1 }, { x: 1180, y: 690, duration: 0.01 }, 1.6);
+          click(DRAFT_BTN, 1.7, 0.8, 2.65, "#desk-btn-draft");
+
+          // ───── the draft slides in and streams (card-morph-anchor + discrete-text-sequence) ─────
+          tl.fromTo("#desk-draft", { x: 560 }, { x: 0, duration: 0.5, ease: "power3.out" }, 2.9);
+          tl.set("#desk-moves", { opacity: 0 }, 3.45); // fully covered by the draft from here on
+          tl.to("#desk-cursor", { x: 684, y: 600, duration: 0.7, ease: "power2.inOut" }, 3.4); // park in the gap between panels
+          click(SENT_BTN, 7.3, 0.75, 8.15, "#desk-btn-sent");
+
+          // ───── marked sent: button stamps, the deal leaves the quiet list (press-release-spring state change) ─────
+          tl.to("#desk-btn-sent", { opacity: 0, duration: 0.12 }, 8.3);
+          tl.fromTo("#desk-btn-done", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, 8.3);
+          tl.to("#desk-badge-daniel", { opacity: 0, duration: 0.15 }, 8.55);
+          tl.fromTo("#desk-badge-ok", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }, 8.6);
+          tl.to("#desk-row-daniel", { backgroundColor: "#dff5e6", duration: 0.3, ease: "power1.out" }, 8.6);
+          tl.to("#desk-row-daniel", { x: 80, opacity: 0, duration: 0.35, ease: "power2.in" }, 9.35);
+          tl.to(["#desk-row-omar", "#desk-row-priya"], { y: -112, duration: 0.45, ease: "power3.inOut" }, 9.6);
+          tl.fromTo("#desk-pill", { scale: 1 }, { scale: 1.25, duration: 0.15, ease: "power2.out", yoyo: true, repeat: 1 }, T.quietSwap);
+          tl.fromTo("#desk-toast", { scale: 0.6, opacity: 0, y: 20 }, { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 9.85);
+          tl.to("#desk-toast", { opacity: 0, y: 16, duration: 0.3, ease: "power2.in" }, 12.5);
+
+          // ───── ask the AI assistant over MCP (prompt-type-submit-generate) ─────
+          tl.fromTo("#desk-chat", { x: 560 }, { x: 0, duration: 0.5, ease: "power3.out" }, 11.15);
+          tl.set("#desk-draft", { opacity: 0 }, 11.7); // fully covered by the assistant panel from here on
+          click(SEND_BTN, 12.1, 0.7, T.submit - 0.08, "#desk-send");
+          tl.fromTo("#desk-bubble", { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power3.out" }, T.submit + 0.05);
+          tl.fromTo("#desk-tool", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "power3.out" }, 13.4);
+          tl.fromTo("#desk-tool", { backgroundColor: "#ffffff" }, { backgroundColor: "#dff5e6", duration: 0.25, immediateRender: false }, T.toolDone);
+          tl.to("#desk-cursor", { x: 1300, y: 760, duration: 0.8, ease: "power2.in" }, 13.7);
+
+          tl.fromTo("#desk-inner", { opacity: 1, scale: 1 }, { opacity: 0, scale: 0.98, duration: 0.35, ease: "power2.in", immediateRender: false }, 18.7);
+
+          window.__timelines["desk"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

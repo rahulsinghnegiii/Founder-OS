@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template id="outro-template">
+      <style>
+        @font-face {
+          font-family: "Manrope";
+          src: url("../assets/fonts/manrope.woff2") format("woff2"), url("assets/fonts/manrope.woff2") format("woff2");
+          font-weight: 200 800;
+          font-display: block;
+        }
+        @font-face {
+          font-family: "Space Grotesk";
+          src: url("../assets/fonts/space-grotesk.woff2") format("woff2"), url("assets/fonts/space-grotesk.woff2") format("woff2");
+          font-weight: 300 700;
+          font-display: block;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: "Manrope", sans-serif;
+          color: #14161f;
+        }
+        #outro-inner {
+          position: absolute;
+          inset: 0;
+        }
+        #outro-lockup {
+          position: absolute;
+          left: 96px;
+          top: 168px;
+          display: flex;
+          align-items: center;
+          gap: 18px;
+        }
+        #outro-logo {
+          width: 76px;
+          height: 76px;
+          border-radius: 22px;
+          border: 3px solid #14161f;
+          background: #f6a3ad;
+          box-shadow: 5px 5px 0 #14161f;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 38px;
+        }
+        #outro-name {
+          font-family: "Space Grotesk", sans-serif;
+          font-size: 66px;
+          font-weight: 700;
+          letter-spacing: -0.035em;
+        }
+        #outro-tagline {
+          position: absolute;
+          left: 96px;
+          top: 284px;
+          width: 520px;
+          font-size: 34px;
+          font-weight: 800;
+          line-height: 1.2;
+          letter-spacing: -0.03em;
+        }
+        #outro-chips {
+          position: absolute;
+          left: 96px;
+          top: 392px;
+          width: 680px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .outro-chip {
+          height: 40px;
+          padding: 0 16px;
+          border: 2.5px solid #14161f;
+          border-radius: 999px;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .outro-chip-dark {
+          background: #14161f;
+          color: #ffffff;
+        }
+        #outro-url {
+          position: absolute;
+          left: 96px;
+          top: 514px;
+          height: 58px;
+          padding: 0 22px;
+          border-radius: 16px;
+          background: #14161f;
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          font-family: "IBM Plex Mono", monospace;
+          font-size: 24px;
+          font-weight: 500;
+          box-shadow: 6px 6px 0 #f6a3ad;
+        }
+        #outro-tilt {
+          position: absolute;
+          left: 836px;
+          top: 214px;
+          width: 360px;
+          height: 250px;
+          rotate: 4deg;
+        }
+        #outro-card {
+          position: absolute;
+          inset: 0;
+          border: 3px solid #14161f;
+          border-radius: 24px;
+          background: #ffffff;
+          box-shadow: 9px 9px 0 #14161f;
+          padding: 22px;
+        }
+        #outro-card-k {
+          font-family: "IBM Plex Mono", monospace;
+          font-size: 14px;
+          font-weight: 500;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+        #outro-card-who {
+          margin-top: 10px;
+          font-size: 27px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+        #outro-card-meta {
+          margin-top: 4px;
+          font-size: 18px;
+          font-weight: 600;
+          color: #4f5462;
+        }
+        #outro-card-done {
+          margin-top: 22px;
+          height: 46px;
+          width: 250px;
+          border: 2.5px solid #14161f;
+          border-radius: 14px;
+          background: #dff5e6;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 0 14px;
+          font-size: 19px;
+          font-weight: 800;
+        }
+        #outro-card-tick {
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          background: #157a3c;
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 15px;
+        }
+      </style>
+
+      <div id="root" data-composition-id="outro" data-width="1280" data-height="720">
+        <div id="outro-inner" data-layout-allow-overlap>
+          <div id="outro-lockup">
+            <div id="outro-logo">F</div>
+            <div id="outro-name">FounderOS</div>
+          </div>
+          <div id="outro-tagline">Open-source AI sales assistant for solo founders.</div>
+          <div id="outro-chips">
+            <div class="outro-chip outro-chip-dark">Self-hosted · MIT</div>
+            <div class="outro-chip">Claude · OpenAI · Ollama</div>
+            <div class="outro-chip">Works in ChatGPT and Claude</div>
+          </div>
+          <div id="outro-url">github.com/rahulsinghnegiii/Founder-OS</div>
+          <div id="outro-tilt">
+            <div id="outro-card">
+              <div id="outro-card-k">Deal · Proposal sent</div>
+              <div id="outro-card-who">Daniel Reyes</div>
+              <div id="outro-card-meta">Harbor Freight Logistics · $32,000</div>
+              <div id="outro-card-done"><span id="outro-card-tick">✓</span>Followed up today</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+          // titlecard-reveal + spring-pop-entrance: one restrained arrival per element, then hold
+          tl.fromTo("#outro-lockup", { scale: 0.85, opacity: 0, y: 16 }, { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.15);
+          tl.fromTo("#outro-tagline", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 0.4);
+          gsap.utils.toArray("#outro-chips .outro-chip").forEach((el, i) => {
+            tl.fromTo(el, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power3.out" }, 0.65 + i * 0.07);
+          });
+          tl.fromTo("#outro-card", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.55, ease: "power3.out" }, 0.75);
+          tl.fromTo("#outro-url", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 0.9);
+          // fade back to bare paper so the GIF loop lands on the hook's empty first frame
+          tl.fromTo("#outro-inner", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.in", immediateRender: false }, 2.85);
+          window.__timelines["outro"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
