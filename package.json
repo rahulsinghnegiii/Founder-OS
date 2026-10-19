@@ -1,6 +1,34 @@
 {
   "name": "founderos",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Open-source, self-hosted AI sales assistant for solo founders. Flags deals going quiet, drafts the follow-up email, and works inside ChatGPT and Claude via MCP.",
+  "keywords": [
+    "ai-crm",
+    "crm",
+    "self-hosted",
+    "open-source-crm",
+    "sales-automation",
+    "sales-pipeline",
+    "lead-management",
+    "follow-up",
+    "ai-agent",
+    "mcp-server",
+    "model-context-protocol",
+    "chatgpt",
+    "claude",
+    "ollama",
+    "solopreneur",
+    "indie-hackers"
+  ],
+  "homepage": "https://github.com/rahulsinghnegiii/Founder-OS#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rahulsinghnegiii/Founder-OS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rahulsinghnegiii/Founder-OS/issues"
+  },
+  "author": "Rahul Singh Negi (https://github.com/rahulsinghnegiii)",
   "license": "MIT",
   "scripts": {
     "build": "pnpm run typecheck && pnpm -r --if-present run build",

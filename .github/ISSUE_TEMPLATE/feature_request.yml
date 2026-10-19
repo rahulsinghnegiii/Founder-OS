@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest something that would help FounderOS close more deals for a one-person company.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation, not the solution. What deal slipped, or what took too long?
+      placeholder: I lose track of leads who reply to my email, because FounderOS still thinks they are silent.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like FounderOS to do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Sales agent (detection, drafts, scoring)
+        - Integrations (Gmail, calendar, CSV)
+        - MCP / ChatGPT / Claude
+        - AI providers
+        - Deployment
+        - UI
+        - Other
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to help build this.

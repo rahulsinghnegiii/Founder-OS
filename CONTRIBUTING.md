@@ -48,6 +48,10 @@ Both must pass. Keep PRs focused on one change, describe what you verified by ha
 - Every AI call must have a deterministic fallback. The app has to work with no provider configured.
 - New environment variables go in `.env.example` with a one-line comment.
 
+## Questions
+
+Use [GitHub Discussions](https://github.com/rahulsinghnegiii/Founder-OS/discussions) for setup questions and ideas, and issues for bugs and concrete feature requests.
+
 ## Code of conduct
 
-Be kind, assume good intent, and keep discussions about the work. Harassment of any kind is not tolerated.
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).

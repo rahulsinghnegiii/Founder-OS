@@ -4,7 +4,7 @@ FounderOS is a self-hosted, single-founder tool. It is not multi-tenant and does
 
 ## Reporting a vulnerability
 
-Please do not open a public issue for security problems. Email the maintainer listed in `package.json` or use GitHub's private vulnerability reporting on this repository. You will get a reply within a week.
+Please do not open a public issue for security problems. Report them privately through GitHub: open the repository's **Security** tab and choose **Report a vulnerability**, or go straight to https://github.com/rahulsinghnegiii/Founder-OS/security/advisories/new. You will get a reply within a week.
 
 ## What is and is not in scope
 

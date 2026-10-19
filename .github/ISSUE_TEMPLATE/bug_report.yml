@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in FounderOS is broken or behaves unexpectedly.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please never paste API keys, `MCP_TOKEN`, or `APP_PASSWORD` values.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+      placeholder: I clicked "Draft follow-up" on a lead in Qualified and got an error toast instead of a draft.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `docker compose up --build`
+        2. Open the Sales Desk
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How are you running FounderOS?
+      options:
+        - Docker Compose
+        - Local development (pnpm)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI provider
+      options:
+        - Anthropic
+        - OpenAI
+        - OpenRouter
+        - Groq
+        - Ollama
+        - Puter (legacy)
+        - None configured
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag or the output of `git rev-parse --short HEAD`.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Server output around the error. Remove any secrets first.
+      render: shell
