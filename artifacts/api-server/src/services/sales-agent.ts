@@ -29,6 +29,7 @@ import {
   stageAfterContact,
   type Staleness,
 } from "./sales-rules";
+import { latestTouch, resolveOpenDraft, type EmailActivity } from "./gmail-rules";
 
 type Lead = typeof leadsTable.$inferSelect;
 type FollowUp = typeof followUpsTable.$inferSelect;
@@ -37,6 +38,9 @@ const SALES_AGENT_SLUG = "alex-sales";
 const SALES_AGENT_NAME = "Alex — Sales Intelligence";
 const SCAN_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const BRIEF_TTL_MS = 60 * 60 * 1000;
+// Drafts are asked for interactively (the UI, MCP clients that give up after about a minute),
+// so fall back to the template rather than keep the founder waiting.
+const DRAFT_AI_TIMEOUT_MS = 40_000;
 
 export type StaleDeal = Staleness & {
   lead: Lead & { estimatedValue: number | null };
@@ -86,6 +90,9 @@ class SalesAgent {
   private timer: NodeJS.Timeout | null = null;
   private scanning = false;
   private briefCache: { at: number; brief: PipelineBrief } | null = null;
+  /** Bumped on every pipeline change so a slow AI brief never caches stale data. */
+  private briefVersion = 0;
+  private briefInFlight: Promise<PipelineBrief> | null = null;
   private salesDepartmentId: string | null | undefined = undefined;
 
   /** Wire event listeners and the recurring stale-deal scan. */
@@ -181,7 +188,8 @@ class SalesAgent {
   // ───────────────────────────── follow-ups ─────────────────────────────
 
   async listFollowUps(status?: string): Promise<FollowUpWithLead[]> {
-    const conditions = status ? [eq(followUpsTable.status, status)] : [];
+    // Drafts for deleted leads are dead weight; hide them everywhere.
+    const conditions = [isNull(leadsTable.deletedAt), ...(status ? [eq(followUpsTable.status, status)] : [])];
     const rows = await db
       .select({
         followUp: followUpsTable,
@@ -192,7 +200,7 @@ class SalesAgent {
       })
       .from(followUpsTable)
       .innerJoin(leadsTable, eq(followUpsTable.leadId, leadsTable.id))
-      .where(conditions.length ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(desc(followUpsTable.createdAt));
 
     return rows.map((r) => ({
@@ -297,7 +305,7 @@ class SalesAgent {
       });
     }
 
-    this.briefCache = null;
+    this.invalidateBrief();
     return updated;
   }
 
@@ -335,8 +343,83 @@ class SalesAgent {
       actorName: founderLabel(await getFounderName()),
       details: { departmentId: await this.getSalesDepartmentId(), leadName: lead.name },
     });
-    this.briefCache = null;
+    this.invalidateBrief();
     return updated;
+  }
+
+  /**
+   * Apply what Gmail sync saw for one lead: move the silence clock to the
+   * latest email either way, and close an open draft the founder already
+   * acted on (they emailed the lead) or no longer needs (the lead replied).
+   */
+  async applyEmailActivity(lead: Lead, activity: EmailActivity): Promise<{ clockMoved: boolean; draftClosed: boolean }> {
+    const latest = latestTouch(activity);
+    if (!latest) return { clockMoved: false, draftClosed: false };
+
+    const departmentId = await this.getSalesDepartmentId();
+    const previous = lead.lastContactedAt;
+    let clockMoved = false;
+
+    if (!previous || latest.at > previous) {
+      const emailedThem = Boolean(activity.lastOutbound && (!previous || activity.lastOutbound.at > previous));
+      await db
+        .update(leadsTable)
+        .set({
+          lastContactedAt: latest.at,
+          status: emailedThem ? stageAfterContact(lead.status) : lead.status,
+          updatedAt: new Date(),
+        })
+        .where(eq(leadsTable.id, lead.id));
+
+      const outbound = latest.direction === "outbound";
+      await logActivity({
+        entityType: "lead",
+        entityId: lead.id,
+        action: outbound ? "email_sent" : "email_received",
+        actorType: outbound ? "user" : "integration",
+        actorName: outbound ? founderLabel(await getFounderName()) : "Gmail sync",
+        details: { departmentId, leadName: lead.name, subject: latest.subject, at: latest.at.toISOString(), via: "gmail" },
+      });
+      clockMoved = true;
+    }
+
+    let draftClosed = false;
+    const [draft] = await db
+      .select()
+      .from(followUpsTable)
+      .where(and(eq(followUpsTable.leadId, lead.id), eq(followUpsTable.status, "draft")))
+      .limit(1);
+    const resolution = draft ? resolveOpenDraft(draft.createdAt, activity) : null;
+    if (draft && resolution) {
+      const now = new Date();
+      await db
+        .update(followUpsTable)
+        .set(
+          resolution.status === "sent"
+            ? { status: "sent", sentAt: resolution.at, updatedAt: now }
+            : { status: "dismissed", dismissedAt: resolution.at, updatedAt: now },
+        )
+        .where(eq(followUpsTable.id, draft.id));
+
+      await logActivity({
+        entityType: "lead",
+        entityId: lead.id,
+        action: resolution.status === "sent" ? "follow_up_sent" : "follow_up_closed",
+        actorType: "integration",
+        actorName: "Gmail sync",
+        details: {
+          departmentId,
+          leadName: lead.name,
+          subject: draft.subject,
+          reason: resolution.because === "founder_emailed" ? "You emailed them" : "They replied",
+          via: "gmail",
+        },
+      });
+      draftClosed = true;
+    }
+
+    if (clockMoved || draftClosed) this.invalidateBrief();
+    return { clockMoved, draftClosed };
   }
 
   // ───────────────────────────── scan ─────────────────────────────
@@ -405,7 +488,7 @@ class SalesAgent {
         },
       });
 
-      this.briefCache = null;
+      this.invalidateBrief();
       publishOperationalEvent("sales.scan.completed", { trigger, stale: stale.length, drafted: drafted.length });
 
       return { scanned: openLeads?.count ?? 0, stale: stale.length, drafted: drafted.length, notified };
@@ -468,14 +551,14 @@ class SalesAgent {
       details: { departmentId: await this.getSalesDepartmentId(), title: proposal.title, dueDate: dueDate.toISOString() },
     });
 
-    this.briefCache = null;
+    this.invalidateBrief();
   }
 
   private async onLeadCreated(payload: Record<string, unknown>): Promise<void> {
     const leadId = typeof payload.leadId === "string" ? payload.leadId : null;
     if (!leadId) return;
     await this.scoreLead(leadId);
-    this.briefCache = null;
+    this.invalidateBrief();
   }
 
   /** Give a new lead a 0–100 score so the pipeline sorts itself. */
@@ -534,30 +617,40 @@ Respond with JSON only: {"score": number, "rationale": "one short sentence"}`,
 
   // ───────────────────────────── brief ─────────────────────────────
 
+  invalidateBrief(): void {
+    this.briefCache = null;
+    this.briefVersion++;
+  }
+
+  /**
+   * The brief without waiting on the AI provider: the cached AI brief while
+   * it is fresh, otherwise the rule-based brief, with an AI brief written in
+   * the background for the next request.
+   */
+  async getBriefFast(): Promise<PipelineBrief> {
+    if (this.briefCache && Date.now() - this.briefCache.at < BRIEF_TTL_MS) {
+      return { ...this.briefCache.brief, cached: true };
+    }
+    if (!this.briefInFlight) {
+      const pending = this.getBrief(true);
+      this.briefInFlight = pending;
+      pending
+        .catch((err) => logger.warn({ err }, "Background pipeline brief failed"))
+        .finally(() => {
+          if (this.briefInFlight === pending) this.briefInFlight = null;
+        });
+    }
+    return (await this.ruleBasedBrief()).brief;
+  }
+
   async getBrief(force = false): Promise<PipelineBrief> {
     if (!force && this.briefCache && Date.now() - this.briefCache.at < BRIEF_TTL_MS) {
       return { ...this.briefCache.brief, cached: true };
     }
 
-    const [snapshot, stale, drafts] = await Promise.all([
-      this.getPipelineSnapshot(),
-      this.listStaleDeals(),
-      this.listFollowUps("draft"),
-    ]);
-
-    const atRiskValue = stale.reduce((n, d) => n + (d.lead.estimatedValue ?? 0), 0);
-    const fallback = this.deterministicBrief(snapshot, stale, drafts);
-
-    let brief: PipelineBrief = {
-      generatedAt: new Date().toISOString(),
-      summary: fallback.summary,
-      actions: fallback.actions,
-      risks: fallback.risks,
-      openValue: snapshot.openValue,
-      atRiskValue,
-      atRiskCount: stale.length,
-      cached: false,
-    };
+    const version = this.briefVersion;
+    const { brief: ruleBased, snapshot, stale, drafts } = await this.ruleBasedBrief();
+    let brief = ruleBased;
 
     if (snapshot.openCount > 0) {
       try {
@@ -601,8 +694,34 @@ Respond with JSON only:
       }
     }
 
-    this.briefCache = { at: Date.now(), brief };
+    // A change landed while the AI was writing: serve this brief once, but don't keep it.
+    if (version === this.briefVersion) this.briefCache = { at: Date.now(), brief };
     return brief;
+  }
+
+  private async ruleBasedBrief(): Promise<{
+    brief: PipelineBrief;
+    snapshot: PipelineSnapshot;
+    stale: StaleDeal[];
+    drafts: FollowUpWithLead[];
+  }> {
+    const [snapshot, stale, drafts] = await Promise.all([
+      this.getPipelineSnapshot(),
+      this.listStaleDeals(),
+      this.listFollowUps("draft"),
+    ]);
+    const { summary, actions, risks } = this.deterministicBrief(snapshot, stale, drafts);
+    const brief: PipelineBrief = {
+      generatedAt: new Date().toISOString(),
+      summary,
+      actions,
+      risks,
+      openValue: snapshot.openValue,
+      atRiskValue: stale.reduce((n, d) => n + (d.lead.estimatedValue ?? 0), 0),
+      atRiskCount: stale.length,
+      cached: false,
+    };
+    return { brief, snapshot, stale, drafts };
   }
 
   private deterministicBrief(
@@ -730,7 +849,7 @@ Respond with JSON only: {"subject": "...", "body": "..."}`,
             }),
           },
         ],
-        { jsonMode: true },
+        { jsonMode: true, timeoutMs: DRAFT_AI_TIMEOUT_MS },
       );
       if (result.error) throw new Error(result.error);
       const parsed = JSON.parse(result.reply) as { subject?: string; body?: string };

@@ -19,7 +19,7 @@ It is a self-hosted, open-source alternative to a full CRM like HubSpot or Piped
 
 **Built for** solo founders, indie hackers, freelancers, consultants, and small agencies who sell but do not want to maintain a CRM.
 
-[Quick start](#quick-start) · [Features](#features) · [Use it from ChatGPT or Claude](#connect-chatgpt-or-claude-mcp) · [FAQ](#faq) · [Roadmap](#roadmap)
+[Quick start](#quick-start) · [Features](#features) · [Use it from ChatGPT or Claude](#connect-chatgpt-or-claude-mcp) · [Gmail sync](#gmail-sync-optional) · [FAQ](#faq) · [Roadmap](#roadmap)
 
 ![FounderOS demo: the Sales Desk flags three deals that went quiet, the Sales agent drafts a follow-up email for Daniel, marking it sent resets his silence clock, and an AI assistant connected over MCP answers which deals are still going quiet](docs/demo.gif)
 
@@ -27,6 +27,7 @@ It is a self-hosted, open-source alternative to a full CRM like HubSpot or Piped
 
 - **Stale-deal detection.** Every open lead has a silence allowance based on its stage: 3 days for new, 5 for contacted, 7 for qualified, 4 after a proposal. The Sales agent scans on boot and every six hours, flags anything past its limit, and marks it critical at double the limit.
 - **AI follow-up drafts.** Each quiet deal gets a short, human email written from the lead's notes, stage, and any proposal you sent. Copy it, send it from your own inbox, click "Mark sent", and the silence clock resets.
+- **Optional Gmail sync.** Connect Gmail and the silence clock keeps itself current. FounderOS reads message headers only, never bodies: emailing a lead or hearing back from them resets their clock, and drafts you've already acted on close themselves.
 - **Lead scoring.** New leads are scored 0 to 100 so the pipeline sorts itself. A heuristic takes over when no AI is available.
 - **Proposal follow-through.** Marking a proposal as sent moves the lead, records the contact, creates a follow-up task due in three days, and notifies you.
 - **Daily pipeline brief.** Open value, value at risk, three concrete moves for today, and the risks, refreshed hourly.
@@ -93,6 +94,7 @@ All configuration is environment variables. `.env.example` documents every one. 
 | `ANTHROPIC_API_KEY` | Recommended provider. Default model `claude-opus-5-5`; override with `ANTHROPIC_MODEL`. |
 | `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `OLLAMA_BASE_URL` | Alternative providers. The first configured one wins; `AI_PROVIDER` forces a choice. |
 | `MCP_TOKEN` | Turns on the MCP endpoint for ChatGPT and Claude. Off when empty. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Turn on optional [Gmail sync](#gmail-sync-optional). Off when empty. |
 | `FOUNDER_NAME` | Used in prompts and email sign-offs until a profile name is stored. |
 
 Keys are read on the server only. Settings → AI Provider shows which provider is active and has a "Test connection" button.
@@ -132,10 +134,32 @@ ChatGPT connects from OpenAI's servers, so it needs a public HTTPS address; `loc
 | `founderos_update_lead_stage`, `founderos_log_contact` | Move a deal or record outreach, with an optional dated note. |
 | `founderos_draft_follow_up`, `founderos_mark_follow_up_sent` | Have the Sales agent write an email, then record that you sent it. FounderOS never sends email itself. |
 | `founderos_scan_pipeline` | Run the stale-deal scan now. |
+| `founderos_sync_gmail` | Pull new Gmail headers now and update last-contact dates (when Gmail sync is connected). |
 
 Treat the connector URL like a password: anyone holding it can read and edit your pipeline. Rotate it by changing `MCP_TOKEN`. The token is redacted from request logs and never returned to the browser.
 
 ![FounderOS settings card with ChatGPT and Claude connection steps and the list of MCP tools](docs/screenshots/mcp-settings.png)
+
+## Gmail sync (optional)
+
+Connect Gmail and you stop logging contacts by hand. Every 15 minutes FounderOS reads the headers of new mail and, for each lead's address:
+
+- an email you sent resets that lead's silence clock and moves a new lead to Contacted;
+- a reply from the lead resets the clock too;
+- an open follow-up draft closes itself: marked sent if you emailed them, dismissed if they wrote back first.
+
+FounderOS asks Google only for the `gmail.metadata` scope. That covers headers (from, to, subject, date) and not message bodies, and Google's consent screen says so. It still never sends email. The refresh token is stored encrypted in your database, and Disconnect deletes it and asks Google to revoke it.
+
+**Setup (about five minutes).** Google requires each self-hosted install to use its own OAuth client.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable the **Gmail API**.
+2. Configure the OAuth consent screen: user type **External**, an app name, your email, and yourself as a **test user**. Google Workspace accounts can pick **Internal** instead.
+3. Create an **OAuth client ID** of type **Web application** with the authorized redirect URI `http://localhost:5000/api/integrations/gmail/callback`, or `https://<your-host>/api/integrations/gmail/callback` once deployed.
+4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`, restart, and open **Settings → Gmail sync → Connect Gmail**.
+
+While an External app is in "Testing", Google expires the connection after seven days and FounderOS asks you to reconnect. Switching the app to "In production" avoids that; because it is your own unverified app, Google then shows an "unverified app" warning that you click through (Advanced → Continue). Google's rules for unverified apps change from time to time, so check its current documentation if a step looks different.
+
+The first sync reads back 30 days (`GMAIL_SYNC_LOOKBACK_DAYS`); later syncs read only new mail. Mail that doesn't involve a lead's address changes nothing.
 
 ## FAQ
 
@@ -143,7 +167,7 @@ Treat the connector URL like a password: anyone holding it can read and edit you
 Yes. It is MIT licensed and self-hosted. You pay your AI provider for the drafts and briefs it writes, or nothing if you run a local model with Ollama.
 
 **Does it send emails for me?**
-No. It writes the draft and you send it from your own inbox, so nothing goes out without you reading it. Click "Mark sent" afterwards and the deal's silence clock resets.
+No. It writes the draft and you send it from your own inbox, so nothing goes out without you reading it. Click "Mark sent" afterwards, or let [Gmail sync](#gmail-sync-optional) notice, and the deal's silence clock resets.
 
 **Which AI models does it support?**
 Anthropic Claude (default `claude-opus-5-5`), OpenAI, any model on OpenRouter, Groq, and local models through Ollama. Set one key in `.env`.
@@ -157,8 +181,11 @@ In your own Postgres. The only data that leaves your server is the context sent 
 **Can I use it from ChatGPT or Claude?**
 Yes, through the built-in MCP server. See [Connect ChatGPT or Claude](#connect-chatgpt-or-claude-mcp).
 
-**Does it sync with Gmail or import from another CRM?**
-Not yet. Gmail sync is next on the [roadmap](#roadmap). Today you add leads in the app, by chat, or through MCP.
+**Does it read my email?**
+Only if you connect Gmail, and then only headers: who emailed whom, when, and the subject line. It never reads message bodies and never sends anything. See [Gmail sync](#gmail-sync-optional).
+
+**Can I import from another CRM?**
+Not yet; CSV import is on the [roadmap](#roadmap). Today you add leads in the app, by chat, or through MCP.
 
 **Is it for teams?**
 No. It is single-user by design, with one password. Teams are better served by a full CRM.
@@ -170,8 +197,9 @@ No. It is single-user by design, with one password. Teams are better served by a
 - [x] Multi-provider AI: Claude, OpenAI, OpenRouter, Groq, Ollama
 - [x] Docker Compose deployment and password protection
 - [x] MCP server for ChatGPT, Claude, and Cursor
-- [ ] Gmail sync: leads and last-contact dates fill themselves in
-- [ ] Reply detection that resets the silence clock automatically
+- [x] Gmail sync: last-contact dates and replies update themselves (headers only)
+- [ ] Suggest new leads from email threads
+- [ ] Outlook and IMAP sync
 - [ ] Weekly pipeline email
 - [ ] CSV import
 
@@ -183,7 +211,7 @@ pnpm monorepo, TypeScript end to end.
 
 - `lib/api-spec/openapi.yaml` is the contract. Zod schemas (`lib/api-zod`) and React Query hooks (`lib/api-client-react`) are generated from it with Orval.
 - `lib/db` is the Drizzle schema for Postgres.
-- `artifacts/api-server` is an Express 5 API. The Sales agent lives in `src/services/sales-agent.ts` with its pure, tested rules in `src/services/sales-rules.ts`. The provider layer in `src/lib/ai` is the only place that talks to an AI vendor, and `src/mcp` is the MCP server.
+- `artifacts/api-server` is an Express 5 API. The Sales agent lives in `src/services/sales-agent.ts` with its pure, tested rules in `src/services/sales-rules.ts`. The provider layer in `src/lib/ai` is the only place that talks to an AI vendor, `src/mcp` is the MCP server, and Gmail sync is `src/services/gmail-sync.ts` with its rules in `gmail-rules.ts`.
 - `artifacts/founder-os` is a React 19, Vite, and Tailwind app. The Sales Desk is `src/pages/sales.tsx`.
 
 In production one process serves both the API and the built frontend. That is what the Docker image does.
@@ -200,7 +228,7 @@ pnpm --filter @workspace/api-spec run codegen   # after editing openapi.yaml
 
 ## Contributing
 
-Issues and pull requests are welcome, especially Gmail sync, reply detection, and deployment recipes. Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Ask questions in [Discussions](https://github.com/rahulsinghnegiii/Founder-OS/discussions) and report security problems privately as described in [SECURITY.md](SECURITY.md).
+Issues and pull requests are welcome, especially Outlook or IMAP sync, CSV import, and deployment recipes. Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Ask questions in [Discussions](https://github.com/rahulsinghnegiii/Founder-OS/discussions) and report security problems privately as described in [SECURITY.md](SECURITY.md).
 
 If FounderOS saves you a deal, starring the repo helps other founders find it.
 

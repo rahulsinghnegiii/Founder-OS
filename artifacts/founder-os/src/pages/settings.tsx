@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { AlertTriangle, Bot, CheckCircle, Cpu, KeyRound, LogOut, Mic, Plug, Zap } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, Bot, CheckCircle, Cpu, KeyRound, LogOut, Mail, Mic, Plug, RefreshCw, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -260,6 +260,8 @@ export default function Settings() {
         </CardHeader>
       </Card>
 
+      <GmailCard />
+
       {data?.mcp ? <McpCard mcp={data.mcp} /> : null}
 
       {data?.authRequired ? (
@@ -388,6 +390,218 @@ export default function Settings() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+interface GmailStatus {
+  configured: boolean;
+  problem: string | null;
+  connected: boolean;
+  needsReconnect: boolean;
+  accountEmail: string | null;
+  lastSyncedAt: string | null;
+  lastSync: {
+    messagesRead: number;
+    leadsMatched: number;
+    clocksMoved: number;
+    draftsClosed: number;
+    truncated: boolean;
+  } | null;
+  lastError: string | null;
+  syncing: boolean;
+  redirectUri: string | null;
+  intervalMinutes: number;
+}
+
+function timeAgo(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? `${hours} h ago` : `${Math.round(hours / 24)} d ago`;
+}
+
+function syncSummary(s: NonNullable<GmailStatus["lastSync"]>): string {
+  return `Read ${s.messagesRead} email${s.messagesRead === 1 ? "" : "s"}, matched ${s.leadsMatched} lead${s.leadsMatched === 1 ? "" : "s"}, reset ${s.clocksMoved} silence clock${s.clocksMoved === 1 ? "" : "s"}, closed ${s.draftsClosed} draft${s.draftsClosed === 1 ? "" : "s"}.${s.truncated ? " Stopped at the message limit." : ""}`;
+}
+
+function GmailCard() {
+  const [status, setStatus] = useState<GmailStatus | null>(null);
+  const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | null>(null);
+  // Google sends the browser back to /settings?gmail=connected|error&reason=...
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gmail") === "connected") return { ok: true, text: "Gmail connected. FounderOS is reading your recent email headers now." };
+    if (params.get("gmail") === "error") return { ok: false, text: params.get("reason") ?? "Gmail connection failed." };
+    return null;
+  });
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("gmail")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/integrations/gmail");
+      if (res.ok) setStatus((await res.json()) as GmailStatus);
+    } catch {
+      // Keep the last known status.
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Poll while a sync runs, e.g. the first one right after connecting.
+  useEffect(() => {
+    if (!status?.syncing) return undefined;
+    const timer = setInterval(() => void load(), 3000);
+    return () => clearInterval(timer);
+  }, [status?.syncing, load]);
+
+  const request = async (kind: "connect" | "sync" | "disconnect") => {
+    setBusy(kind);
+    setNotice(null);
+    try {
+      const res =
+        kind === "connect"
+          ? await fetch("/api/integrations/gmail/connect", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ origin: window.location.origin }),
+            })
+          : kind === "sync"
+            ? await fetch("/api/integrations/gmail/sync", { method: "POST" })
+            : await fetch("/api/integrations/gmail", { method: "DELETE" });
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw new Error(typeof body.error === "string" ? body.error : `Request failed (${res.status})`);
+
+      if (kind === "connect" && typeof body.url === "string") {
+        window.location.assign(body.url);
+        return;
+      }
+      if (kind === "sync") setNotice({ ok: true, text: syncSummary(body as unknown as NonNullable<GmailStatus["lastSync"]>) });
+      if (kind === "disconnect") setNotice({ ok: true, text: "Gmail disconnected and its saved token deleted." });
+    } catch (err) {
+      setNotice({ ok: false, text: err instanceof Error ? err.message : "Something went wrong." });
+    } finally {
+      setBusy(null);
+      void load();
+    }
+  };
+
+  const redirectUri = status?.redirectUri ?? `${window.location.origin}/api/integrations/gmail/callback`;
+  const healthy = Boolean(status?.connected && !status.needsReconnect);
+  const syncing = busy === "sync" || Boolean(status?.syncing);
+
+  return (
+    <Card className="bg-card border-border/50">
+      <CardHeader>
+        <div className="flex flex-wrap items-start gap-3">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
+              healthy ? "border-emerald-400 bg-emerald-100" : status?.needsReconnect ? "border-amber-400 bg-amber-100" : "border-slate-300 bg-secondary",
+            )}
+          >
+            <Mail className={cn("h-5 w-5", healthy ? "text-emerald-600" : status?.needsReconnect ? "text-amber-600" : "text-slate-600")} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle>Gmail sync</CardTitle>
+            <CardDescription className="mt-1">
+              {!status ? (
+                "Checking Gmail…"
+              ) : status.needsReconnect ? (
+                <span className="flex items-center gap-1.5 text-amber-700">
+                  <AlertTriangle className="h-4 w-4" /> Needs reconnecting
+                </span>
+              ) : status.connected ? (
+                <span className="flex flex-wrap items-center gap-1.5 text-emerald-700">
+                  <CheckCircle className="h-4 w-4" /> Connected as {status.accountEmail}
+                  <span className="text-slate-500">
+                    · {status.syncing ? "syncing now…" : status.lastSyncedAt ? `synced ${timeAgo(status.lastSyncedAt)}` : "not synced yet"}
+                  </span>
+                </span>
+              ) : status.configured ? (
+                "Ready to connect."
+              ) : (
+                "Off. Add a Google OAuth client to .env to turn it on."
+              )}
+            </CardDescription>
+          </div>
+          {status?.configured ? (
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              {healthy ? (
+                <Button size="sm" variant="outline" className="rounded-xl" onClick={() => void request("sync")} disabled={busy !== null || syncing}>
+                  <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", syncing && "animate-spin")} />
+                  {syncing ? "Syncing…" : "Sync now"}
+                </Button>
+              ) : (
+                <Button size="sm" className="rounded-xl" onClick={() => void request("connect")} disabled={busy !== null}>
+                  {busy === "connect" ? "Opening Google…" : status.needsReconnect ? "Reconnect Gmail" : "Connect Gmail"}
+                </Button>
+              )}
+              {status.connected ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-xl text-slate-600"
+                  onClick={() => {
+                    if (window.confirm("Disconnect Gmail? FounderOS deletes its saved token and asks Google to revoke it.")) void request("disconnect");
+                  }}
+                  disabled={busy !== null}
+                >
+                  Disconnect
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {notice ? (
+          <p className={cn("rounded-2xl border px-4 py-3", notice.ok ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-rose-200 bg-rose-50 text-rose-900")}>
+            {notice.text}
+          </p>
+        ) : null}
+        {status?.lastError && !notice ? (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">Last sync problem: {status.lastError}</p>
+        ) : null}
+        <p className="text-slate-600">
+          Every {status?.intervalMinutes ?? 15} minutes FounderOS reads the <strong>headers</strong> of new mail (from, to, subject, time),
+          never the message body, and moves each lead&apos;s last contact to the latest email either way. Drafts you&apos;ve already sent,
+          or that the lead answered, close themselves. FounderOS still never sends email.
+        </p>
+        {status?.connected && status.lastSync && !status.syncing ? (
+          <p className="text-xs text-muted-foreground">Last sync: {syncSummary(status.lastSync)}</p>
+        ) : null}
+        {status && !status.connected ? (
+          <div className="rounded-2xl border border-border/60 bg-white/60 px-4 py-3">
+            <p className="font-medium text-slate-900">{status.configured ? "Before you connect" : "Set it up (about 5 minutes)"}</p>
+            {status.configured ? (
+              <p className="mt-1 text-slate-600">Your Google OAuth client must list this authorized redirect URI:</p>
+            ) : (
+              <ol className="mt-1 list-decimal space-y-1 pl-5 text-slate-600">
+                <li>
+                  In Google Cloud Console, enable the Gmail API and create an OAuth client of type <em>Web application</em>.
+                </li>
+                <li>Add this authorized redirect URI to the OAuth client:</li>
+              </ol>
+            )}
+            <code className="mt-2 block break-all rounded-xl bg-slate-900 px-3 py-2 text-xs text-slate-100">{redirectUri}</code>
+            {!status.configured ? (
+              <p className="mt-2 text-slate-600">
+                Then set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> in <code>.env</code> and restart. Full steps are in
+                the README under &quot;Gmail sync&quot;.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 

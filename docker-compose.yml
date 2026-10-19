@@ -57,6 +57,12 @@ services:
       MCP_TOKEN: ${MCP_TOKEN:-}
       APP_URL: ${APP_URL:-}
       NET_CONNECT_ATTEMPT_MS: ${NET_CONNECT_ATTEMPT_MS:-2500}
+      # Optional Gmail sync (headers only). See README → Gmail sync.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      GMAIL_SYNC_INTERVAL_MINUTES: ${GMAIL_SYNC_INTERVAL_MINUTES:-15}
+      GMAIL_SYNC_LOOKBACK_DAYS: ${GMAIL_SYNC_LOOKBACK_DAYS:-30}
       # Set to 1 to load a sample pipeline on first start (skipped if leads exist).
       SEED_DEMO: ${SEED_DEMO:-0}
 

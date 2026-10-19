@@ -4,8 +4,27 @@ import { estimateCost } from "./models";
 import type { AIMessage, AICallOptions, AICallResult, ProviderName } from "./types";
 import { logger } from "../logger";
 
+class CallTimeoutError extends Error {
+  constructor(readonly ms: number) {
+    super(`No reply within ${ms} ms`);
+  }
+}
+
+/** The provider request keeps running to its own timeout; the caller just stops waiting. */
+function withTimeout<T>(pending: Promise<T>, ms: number | undefined): Promise<T> {
+  if (!ms) return pending;
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new CallTimeoutError(ms)), ms);
+  });
+  return Promise.race([pending, timeout]).finally(() => clearTimeout(timer));
+}
+
 function describeError(provider: ProviderName, err: unknown): string {
   if (provider === "none") return NO_PROVIDER_MESSAGE;
+  if (err instanceof CallTimeoutError) {
+    return `The ${provider} provider didn't reply within ${Math.round(err.ms / 1000)} seconds.`;
+  }
 
   if (err instanceof Anthropic.AuthenticationError) {
     return "Anthropic rejected the API key. Check ANTHROPIC_API_KEY in your .env.";
@@ -51,7 +70,7 @@ export async function callAIWithRouting(
   }
 
   try {
-    const result = await provider.chatCompletions(messages, options);
+    const result = await withTimeout(provider.chatCompletions(messages, options), options.timeoutMs);
     const latencyMs = Date.now() - startTime;
     logger.info(
       { provider: provider.name, replyLength: result.reply.length, model: result.model, latencyMs },

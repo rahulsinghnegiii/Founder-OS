@@ -17,7 +17,7 @@ router.get("/sales/overview", async (_req, res) => {
       salesAgent.getPipelineSnapshot(),
       salesAgent.listStaleDeals(),
       salesAgent.listFollowUps("draft"),
-      salesAgent.getBrief(),
+      salesAgent.getBriefFast(),
     ]);
     res.json({ pipeline, staleDeals, followUps, brief });
   } catch (err) {

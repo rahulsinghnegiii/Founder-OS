@@ -85,6 +85,17 @@ type Overview = {
 };
 
 const OVERVIEW_KEY = ["sales", "overview"] as const;
+const GMAIL_KEY = ["integrations", "gmail"] as const;
+
+type GmailStatus = {
+  configured: boolean;
+  connected: boolean;
+  needsReconnect: boolean;
+  lastSyncedAt: string | null;
+  syncing: boolean;
+};
+
+type GmailSyncResult = { messagesRead: number; clocksMoved: number; draftsClosed: number };
 
 function money(value: number | null | undefined): string {
   const n = value ?? 0;
@@ -111,6 +122,25 @@ export default function SalesDesk() {
     void queryClient.invalidateQueries({ queryKey: OVERVIEW_KEY });
     void queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0] ?? "").includes("/api/") });
   };
+
+  const { data: gmail } = useQuery({
+    queryKey: GMAIL_KEY,
+    queryFn: () => fetcher<GmailStatus>("/api/integrations/gmail"),
+    refetchInterval: 60_000,
+  });
+
+  const syncGmail = useMutation({
+    mutationFn: () => post<GmailSyncResult>("/api/integrations/gmail/sync"),
+    onSuccess: (result) => {
+      toast({
+        title: "Gmail synced",
+        description: `${result.messagesRead} email${result.messagesRead === 1 ? "" : "s"} read, ${result.clocksMoved} silence clock${result.clocksMoved === 1 ? "" : "s"} reset, ${result.draftsClosed} draft${result.draftsClosed === 1 ? "" : "s"} closed.`,
+      });
+      void queryClient.invalidateQueries({ queryKey: GMAIL_KEY });
+      invalidate();
+    },
+    onError: () => toast({ title: "Gmail sync failed", description: "Open Settings → Gmail sync for details.", variant: "destructive" }),
+  });
 
   const scan = useMutation({
     mutationFn: () => post<{ scanned: number; stale: number; drafted: number }>("/api/sales/scan"),
@@ -214,6 +244,25 @@ export default function SalesDesk() {
         action={
           <div className="flex flex-wrap items-center gap-3">
             <StatusPill label="Pipeline" value={healthLabel} tone={healthTone} />
+            {gmail?.connected && !gmail.needsReconnect ? (
+              <Button
+                variant="outline"
+                onClick={() => syncGmail.mutate()}
+                disabled={syncGmail.isPending || gmail.syncing}
+                className="rounded-2xl"
+                title={gmail.lastSyncedAt ? `Last synced ${new Date(gmail.lastSyncedAt).toLocaleString()}` : "Not synced yet"}
+              >
+                <Mail className={cn("mr-2 h-4 w-4", (syncGmail.isPending || gmail.syncing) && "animate-pulse")} />
+                {syncGmail.isPending || gmail.syncing ? "Syncing Gmail…" : "Sync Gmail"}
+              </Button>
+            ) : gmail ? (
+              <Button asChild variant="outline" className="rounded-2xl">
+                <Link href="/settings">
+                  <Mail className="mr-2 h-4 w-4" />
+                  {gmail.needsReconnect ? "Reconnect Gmail" : "Connect Gmail"}
+                </Link>
+              </Button>
+            ) : null}
             <Button
               onClick={() => scan.mutate()}
               disabled={scan.isPending}

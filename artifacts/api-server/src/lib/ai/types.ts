@@ -22,6 +22,8 @@ export type AICallOptions = {
   model?: string;
   /** Route this call to a specific configured provider instead of the active one. */
   provider?: ProviderName;
+  /** Give up after this long and return an error result, so the caller can fall back. */
+  timeoutMs?: number;
 };
 
 export type AICallResult = {

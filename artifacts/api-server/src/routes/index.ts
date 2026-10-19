@@ -27,6 +27,7 @@ import meetingsRouter from "./meetings";
 import teamMembersRouter from "./team-members";
 import salesRouter from "./sales";
 import authRouter from "./auth";
+import integrationsRouter from "./integrations";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use(remindersRouter);
 router.use(meetingsRouter);
 router.use(teamMembersRouter);
 router.use(salesRouter);
+router.use(integrationsRouter);
 
 export default router;

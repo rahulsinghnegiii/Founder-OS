@@ -6,6 +6,7 @@ import {
   authRequired,
   clearLoginAttempts,
   isAuthenticated,
+  isSecureRequest,
   registerLoginAttempt,
   sessionToken,
   verifyPassword,
@@ -18,12 +19,6 @@ function clientIp(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
   const first = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0];
   return (first ?? req.ip ?? "unknown").trim();
-}
-
-function isSecure(req: Request): boolean {
-  if (process.env.COOKIE_SECURE === "1") return true;
-  if (process.env.COOKIE_SECURE === "0") return false;
-  return req.secure || req.headers["x-forwarded-proto"] === "https";
 }
 
 router.get("/auth/status", (req, res) => {
@@ -52,7 +47,7 @@ router.post("/auth/login", async (req, res) => {
   res.cookie(AUTH_COOKIE, sessionToken(), {
     httpOnly: true,
     sameSite: "lax",
-    secure: isSecure(req),
+    secure: isSecureRequest(req),
     maxAge: SESSION_MAX_AGE_MS,
     path: "/",
   });

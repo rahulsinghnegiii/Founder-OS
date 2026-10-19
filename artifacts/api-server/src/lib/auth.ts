@@ -50,6 +50,13 @@ export function isAuthenticated(req: Request): boolean {
   return safeEqual(cookie, expected) || safeEqual(bearer, expected);
 }
 
+/** Whether cookies should be marked Secure. COOKIE_SECURE=1/0 overrides detection. */
+export function isSecureRequest(req: Request): boolean {
+  if (process.env.COOKIE_SECURE === "1") return true;
+  if (process.env.COOKIE_SECURE === "0") return false;
+  return req.secure || req.headers["x-forwarded-proto"] === "https";
+}
+
 /** Returns true when this IP may attempt a login, and records the attempt. */
 export function registerLoginAttempt(ip: string): boolean {
   const now = Date.now();

@@ -23,3 +23,4 @@ export * from "./execution-jobs";
 export * from "./plans";
 export * from "./onboarding";
 export * from "./follow-ups";
+export * from "./integrations";

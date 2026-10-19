@@ -8,6 +8,7 @@ import { STAGE_LABELS, assessStaleness, daysBetween, lastTouch, money } from "..
 import { logActivity } from "../lib/activity-logger";
 import { publishOperationalEvent } from "../lib/event-bus";
 import { logger } from "../lib/logger";
+import { GmailSyncError, gmailSync } from "../services/gmail-sync";
 
 /**
  * FounderOS MCP server.
@@ -35,6 +36,7 @@ export const MCP_TOOL_NAMES = [
   "founderos_draft_follow_up",
   "founderos_mark_follow_up_sent",
   "founderos_scan_pipeline",
+  "founderos_sync_gmail",
 ] as const;
 
 export const MCP_WRITE_TOOLS: ReadonlySet<string> = new Set([
@@ -44,11 +46,14 @@ export const MCP_WRITE_TOOLS: ReadonlySet<string> = new Set([
   "founderos_draft_follow_up",
   "founderos_mark_follow_up_sent",
   "founderos_scan_pipeline",
+  "founderos_sync_gmail",
 ]);
 
 const INSTRUCTIONS = `FounderOS is a self-hosted AI sales assistant for a solo founder. Use these tools to answer questions about the founder's sales pipeline and to act on it.
 
 Typical flow: call founderos_get_pipeline or founderos_list_stale_deals to see what needs attention, founderos_draft_follow_up to write an email for a quiet deal, then the founder sends it from their own inbox and you call founderos_mark_follow_up_sent. FounderOS never sends email itself.
+
+If the founder has connected Gmail, founderos_sync_gmail updates last-contact dates from email headers (never bodies), so you rarely need founderos_log_contact for email.
 
 Tools that take a "lead" accept either the lead id or the lead's name. Money values are USD. A deal is "going quiet" when it has had no contact for longer than its stage allows (new 3 days, contacted 5, qualified 7, proposal 4) and "critical" at double that.`;
 
@@ -399,7 +404,7 @@ export function createFounderOsMcpServer(options: { baseUrl: string }): McpServe
     {
       title: "Get pipeline overview",
       description:
-        "Overview of the sales pipeline: open deal count and value per stage, won and lost totals, value at risk from deals going quiet, follow-up drafts waiting, and the Sales agent's brief with today's suggested moves. Start here for questions like \"how is my pipeline?\" or \"what should I do today?\". The brief is cached for an hour; set refresh_brief to regenerate it (slower, uses the AI provider).",
+        "Overview of the sales pipeline: open deal count and value per stage, won and lost totals, value at risk from deals going quiet, follow-up drafts waiting, and the Sales agent's brief with today's suggested moves. Start here for questions like \"how is my pipeline?\" or \"what should I do today?\". It returns at once with the cached AI brief, or a rule-based brief while a fresh AI brief is written in the background; set refresh_brief to wait for a new AI brief (slower).",
       inputSchema: {
         refresh_brief: z.boolean().default(false).describe("Regenerate the AI brief instead of using the cached one."),
       },
@@ -409,7 +414,7 @@ export function createFounderOsMcpServer(options: { baseUrl: string }): McpServe
       run("founderos_get_pipeline", async () => {
         const [snapshot, brief, stale, drafts] = await Promise.all([
           salesAgent.getPipelineSnapshot(),
-          salesAgent.getBrief(refresh_brief),
+          refresh_brief ? salesAgent.getBrief(true) : salesAgent.getBriefFast(),
           salesAgent.listStaleDeals(),
           salesAgent.listFollowUps("draft"),
         ]);
@@ -782,6 +787,31 @@ export function createFounderOsMcpServer(options: { baseUrl: string }): McpServe
           `Scanned ${result.scanned} open deal${result.scanned === 1 ? "" : "s"}: ${result.stale} going quiet, ${result.drafted} new draft${result.drafted === 1 ? "" : "s"} written.`,
           result,
         );
+      }),
+  );
+
+  server.registerTool(
+    "founderos_sync_gmail",
+    {
+      title: "Sync Gmail now",
+      description:
+        "Read new Gmail headers (who emailed whom and when, never message bodies) and update each lead's last contact. Resets the silence clock for any lead the founder emailed or who wrote back, and closes follow-up drafts that are no longer needed. Works only after Gmail is connected in FounderOS Settings; otherwise it says how to connect.",
+      inputSchema: {},
+      annotations: { ...WRITE_IDEMPOTENT, openWorldHint: true },
+    },
+    async () =>
+      run("founderos_sync_gmail", async () => {
+        try {
+          const result = await gmailSync.sync("mcp");
+          const since = result.since.slice(0, 10);
+          return textResult(
+            `Read ${result.messagesRead} email${result.messagesRead === 1 ? "" : "s"} since ${since}: ${result.leadsMatched} lead${result.leadsMatched === 1 ? "" : "s"} matched, ${result.clocksMoved} silence clock${result.clocksMoved === 1 ? "" : "s"} moved, ${result.draftsClosed} draft${result.draftsClosed === 1 ? "" : "s"} closed.${result.truncated ? " Stopped early at the message limit; run it again to continue." : ""}`,
+            result,
+          );
+        } catch (err) {
+          if (err instanceof GmailSyncError) throw new ToolError(err.message);
+          throw err;
+        }
       }),
   );
 

@@ -55,6 +55,10 @@ registerBrainEventSync();
 const { salesAgent } = await import("./services/sales-agent");
 salesAgent.start();
 
+// Optional Gmail sync: keeps last-contact dates current from email headers.
+const { gmailSync } = await import("./services/gmail-sync");
+gmailSync.start();
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
